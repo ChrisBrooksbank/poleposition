@@ -2,7 +2,14 @@
 // Logical resolution: 256x224 pixels (scaled to fill browser window)
 
 import { GameLoop } from './GameLoop';
-import { RoadRenderer } from './renderer/RoadRenderer';
+import {
+  RoadRenderer,
+  computeCurveOffsets,
+  HORIZON_Y,
+  CAMERA_DEPTH,
+} from './renderer/RoadRenderer';
+import { BackgroundRenderer } from './renderer/BackgroundRenderer';
+import { getTrackCurve } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -32,18 +39,33 @@ export function setupCanvas(): CanvasRenderingContext2D {
 }
 
 const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+/** Player's world-Z position in metres. Advances each frame once driving is implemented. */
+const playerZ = 0;
 
 function update(_dt: number): void {
   // dt is in milliseconds; game logic will use this in later tasks
 }
 
 function render(ctx: CanvasRenderingContext2D): void {
-  // Clear screen with sky colour (placeholder until background task)
-  ctx.fillStyle = '#5ba3e0';
-  ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+  // Compute per-scanline curve offsets to determine vanishing-point sway.
+  // The offset at horizonY + 1 is the maximum accumulated offset and drives
+  // background parallax (farther layers shift proportionally less).
+  const curveOffsets = computeCurveOffsets(
+    LOGICAL_HEIGHT,
+    HORIZON_Y,
+    CAMERA_DEPTH,
+    playerZ,
+    getTrackCurve
+  );
+  const parallaxX = curveOffsets[HORIZON_Y + 1];
+
+  // Background: sky gradient, Mt. Fuji, mountain range (drawn before road)
+  bgRenderer.render(ctx, parallaxX);
 
   // Render pseudo-3D road (scanline perspective projection)
-  roadRenderer.render(ctx);
+  roadRenderer.render(ctx, playerZ, getTrackCurve);
 }
 
 function main(): void {
