@@ -27,7 +27,7 @@
 
 ### Phase 3: Player Car & Input (driving feel)
 
-- [ ] Implement keyboard input handler: left/right arrows for steering, up for throttle, down for brake, one key for gear shift toggle (spec: driving-mechanics.md)
+- [x] Implement keyboard input handler: left/right arrows for steering, up for throttle, down for brake, one key for gear shift toggle (spec: driving-mechanics.md)
 - [ ] Implement speed/acceleration model: low gear (half top speed, better accel), high gear (full top speed 225 MPH default), gradual deceleration on release, faster decel on brake (spec: driving-mechanics.md)
 - [ ] Implement steering physics: proportional input, speed-sensitive sensitivity, car lateral position update relative to road curve (spec: driving-mechanics.md)
 - [ ] Implement off-road behavior: detect when car is outside road edges, apply dramatic speed reduction, trigger audio/visual feedback (spec: driving-mechanics.md)
