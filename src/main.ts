@@ -22,6 +22,7 @@ import { ExplosionRenderer } from './renderer/ExplosionRenderer';
 import { AICarSystem } from './ai/AICarSystem';
 import { AICarRenderer } from './renderer/AICarRenderer';
 import { GameStateMachine, GameState } from './state/GameStateMachine';
+import { AttractMode, AttractPhase } from './state/AttractMode';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -78,6 +79,9 @@ let aiCars = aiCarSystem.getCars();
 
 /** Elapsed time in the current state (ms). Reset in each state's onEnter. */
 let stateElapsed = 0;
+
+/** Attract mode cycle controller (title ↔ demo phases). */
+const attractMode = new AttractMode();
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -196,13 +200,16 @@ function renderRoadBackdrop(ctx: CanvasRenderingContext2D): void {
 
 const stateMachine = new GameStateMachine(GameState.ATTRACT);
 
-// ATTRACT — title screen shown while idle
+// ATTRACT — cycling title / demo screen shown while idle
 stateMachine.register(GameState.ATTRACT, {
   onEnter: () => {
     stateElapsed = 0;
+    attractMode.reset();
   },
   update: (dt) => {
     stateElapsed += dt;
+    attractMode.update(dt);
+
     // Brief grace period prevents accidental transitions right after entering state
     if (stateElapsed > 300) {
       const startPressed = input.isKeyDown('Enter') || input.isKeyDown('Space') || input.throttle;
@@ -212,21 +219,50 @@ stateMachine.register(GameState.ATTRACT, {
     }
   },
   render: (ctx) => {
-    renderRoadBackdrop(ctx);
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#ffdd00';
-    ctx.font = 'bold 16px monospace';
-    ctx.fillText('POLE POSITION', LOGICAL_WIDTH / 2, 80);
-    // Blink "PRESS ENTER" every 500 ms
+    if (attractMode.phase === AttractPhase.DEMO) {
+      // DEMO phase: show the road scrolling with a simulated driver
+      const curveOffsets = computeCurveOffsets(
+        LOGICAL_HEIGHT,
+        HORIZON_Y,
+        CAMERA_DEPTH,
+        attractMode.demoZ,
+        getTrackCurve
+      );
+      const parallaxX = curveOffsets[HORIZON_Y + 1];
+      bgRenderer.render(ctx, parallaxX);
+      roadRenderer.render(ctx, attractMode.demoZ, getTrackCurve, 0, 0);
+
+      // Dim overlay so "PRESS ENTER" is still visible
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('DEMO', LOGICAL_WIDTH / 2, 12);
+      ctx.restore();
+    } else {
+      // TITLE phase: static road backdrop + title overlay
+      renderRoadBackdrop(ctx);
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText('POLE POSITION', LOGICAL_WIDTH / 2, 80);
+      ctx.restore();
+    }
+
+    // Blink "PRESS ENTER" every 500 ms across both phases
     if (Math.floor(stateElapsed / 500) % 2 === 0) {
+      ctx.save();
       ctx.fillStyle = '#ffffff';
       ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
       ctx.fillText('PRESS ENTER TO START', LOGICAL_WIDTH / 2, 120);
+      ctx.restore();
     }
-    ctx.restore();
   },
 });
 
