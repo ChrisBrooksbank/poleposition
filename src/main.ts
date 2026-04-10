@@ -17,6 +17,8 @@ import { PlayerPhysics } from './physics/PlayerPhysics';
 import { SteeringPhysics, MPH_TO_MS } from './physics/SteeringPhysics';
 import { PlayerCarRenderer } from './renderer/PlayerCarRenderer';
 import { CollisionDetector } from './physics/CollisionDetector';
+import { ExplosionState } from './state/ExplosionState';
+import { ExplosionRenderer } from './renderer/ExplosionRenderer';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -49,11 +51,13 @@ const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const billboardRenderer = new BillboardRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const playerCarRenderer = new PlayerCarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+const explosionRenderer = new ExplosionRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
 const input = new InputHandler();
 const physics = new PlayerPhysics();
 const steering = new SteeringPhysics();
 const collisionDetector = new CollisionDetector();
+const explosionState = new ExplosionState();
 
 /** Player's world-Z position in metres. Advances each frame based on speed. */
 let playerZ = 0;
@@ -65,6 +69,18 @@ let isOffRoad = false;
 let isColliding = false;
 
 function update(dt: number): void {
+  // During an explosion the car is frozen — advance the timer and respawn when done.
+  if (explosionState.isExploding) {
+    const shouldRespawn = explosionState.update(dt);
+    if (shouldRespawn) {
+      physics.reset();
+      steering.reset();
+    }
+    isOffRoad = false;
+    isColliding = false;
+    return;
+  }
+
   // Update speed model
   physics.update(dt, input.throttle, input.brake, input.gear);
 
@@ -82,6 +98,11 @@ function update(dt: number): void {
   isColliding =
     collisionDetector.checkBillboards(playerZ, steering.playerX) ||
     collisionDetector.checkAICars(playerZ, steering.playerX, []);
+
+  // Trigger explosion on fresh collision
+  if (isColliding) {
+    explosionState.trigger();
+  }
 
   // Advance position along the track (speed in MPH → metres per second)
   playerZ += physics.speed * MPH_TO_MS * (dt / 1000);
@@ -120,18 +141,23 @@ function render(ctx: CanvasRenderingContext2D): void {
     ctx.restore();
   }
 
-  // Collision flash: semi-transparent white overlay when touching a billboard or AI car
-  if (isColliding) {
-    ctx.save();
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y);
-    ctx.restore();
-  }
+  // Render player car or explosion animation (mutually exclusive)
+  if (explosionState.isExploding) {
+    explosionRenderer.render(ctx, playerX, explosionState.frame);
+  } else {
+    // Collision flash: brief white overlay when first touching a billboard or AI car
+    if (isColliding) {
+      ctx.save();
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y);
+      ctx.restore();
+    }
 
-  // Render player car sprite (always on top of road and billboards)
-  const steer = PlayerCarRenderer.steerState(input.left, input.right);
-  playerCarRenderer.render(ctx, playerX, steer);
+    // Render player car sprite (always on top of road and billboards)
+    const steer = PlayerCarRenderer.steerState(input.left, input.right);
+    playerCarRenderer.render(ctx, playerX, steer);
+  }
 }
 
 function main(): void {
