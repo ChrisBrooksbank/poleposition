@@ -14,6 +14,10 @@ export class PlayerPhysics {
   static readonly COAST_DECEL = 20;
   /** Deceleration rate in MPH/s when braking */
   static readonly BRAKE_DECEL = 80;
+  /** Maximum speed allowed while driving on grass, in MPH. */
+  static readonly OFF_ROAD_SPEED_CAP = 30;
+  /** Additional deceleration rate applied each frame when on grass, in MPH/s. */
+  static readonly OFF_ROAD_DECEL = 120;
 
   private _speed = 0;
 
@@ -65,6 +69,19 @@ export class PlayerPhysics {
       // Coasting — gradual deceleration to a stop
       this._speed = Math.max(0, this._speed - PlayerPhysics.COAST_DECEL * dtSec);
     }
+  }
+
+  /**
+   * Apply off-road (grass) speed penalty.
+   * Call this AFTER the normal update() when the car is detected to be off-road.
+   * Rapidly decelerates the car and enforces a low speed cap.
+   *
+   * @param dt Delta time in milliseconds.
+   */
+  applyOffRoadPenalty(dt: number): void {
+    const dtSec = dt / 1000;
+    const decelerated = Math.max(0, this._speed - PlayerPhysics.OFF_ROAD_DECEL * dtSec);
+    this._speed = Math.min(decelerated, PlayerPhysics.OFF_ROAD_SPEED_CAP);
   }
 
   /** Reset speed to zero (used on respawn after crash). */

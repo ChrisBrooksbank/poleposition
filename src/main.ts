@@ -7,6 +7,7 @@ import {
   computeCurveOffsets,
   HORIZON_Y,
   CAMERA_DEPTH,
+  ROAD_HALF_WIDTH,
 } from './renderer/RoadRenderer';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer';
 import { BillboardRenderer } from './renderer/BillboardRenderer';
@@ -53,6 +54,9 @@ const steering = new SteeringPhysics();
 /** Player's world-Z position in metres. Advances each frame based on speed. */
 let playerZ = 0;
 
+/** Whether the player car is currently off the road surface (on grass). */
+let isOffRoad = false;
+
 function update(dt: number): void {
   // Update speed model
   physics.update(dt, input.throttle, input.brake, input.gear);
@@ -60,6 +64,12 @@ function update(dt: number): void {
   // Update lateral position based on steering input and road curve
   const curvePower = getTrackCurve(playerZ);
   steering.update(dt, input.left, input.right, physics.speed, curvePower, physics.topSpeedHighGear);
+
+  // Off-road detection: car is off-road when outside the road edges
+  isOffRoad = Math.abs(steering.playerX) > ROAD_HALF_WIDTH;
+  if (isOffRoad) {
+    physics.applyOffRoadPenalty(dt);
+  }
 
   // Advance position along the track (speed in MPH → metres per second)
   playerZ += physics.speed * MPH_TO_MS * (dt / 1000);
@@ -88,6 +98,15 @@ function render(ctx: CanvasRenderingContext2D): void {
 
   // Render distance-scaled billboard sprites on road edges
   billboardRenderer.render(ctx, playerZ, getTrackCurve, playerX);
+
+  // Off-road visual feedback: semi-transparent green overlay on the road area
+  if (isOffRoad) {
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#3a6e10';
+    ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y);
+    ctx.restore();
+  }
 }
 
 function main(): void {
