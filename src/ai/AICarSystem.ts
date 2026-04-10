@@ -172,6 +172,19 @@ export class AICarSystem {
     return result;
   }
 
+  /**
+   * Reset all AI cars to their initial positions and clear elapsed time.
+   * Called when starting a new qualifying lap or Grand Prix race.
+   */
+  reset(): void {
+    this.time = 0;
+    for (let i = 0; i < AI_CAR_CONFIGS.length; i++) {
+      this.carZ[i] = AI_CAR_CONFIGS[i].initialZ;
+      this.carX[i] = AI_CAR_CONFIGS[i].baseLateralX;
+      this.wavePhases[i] = (i * Math.PI * 2) / AI_CAR_CONFIGS.length;
+    }
+  }
+
   /** Total number of AI cars managed by this system. */
   get count(): number {
     return AI_CAR_CONFIGS.length;

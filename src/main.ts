@@ -21,6 +21,7 @@ import { ExplosionState } from './state/ExplosionState';
 import { ExplosionRenderer } from './renderer/ExplosionRenderer';
 import { AICarSystem } from './ai/AICarSystem';
 import { AICarRenderer } from './renderer/AICarRenderer';
+import { GameStateMachine, GameState } from './state/GameStateMachine';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -60,7 +61,7 @@ const input = new InputHandler();
 const physics = new PlayerPhysics();
 const steering = new SteeringPhysics();
 const collisionDetector = new CollisionDetector();
-const explosionState = new ExplosionState();
+let explosionState = new ExplosionState();
 const aiCarSystem = new AICarSystem();
 
 /** Player's world-Z position in metres. Advances each frame based on speed. */
@@ -75,7 +76,12 @@ let isColliding = false;
 /** Snapshot of AI car states updated each frame (reused for collision + rendering). */
 let aiCars = aiCarSystem.getCars();
 
-function update(dt: number): void {
+/** Elapsed time in the current state (ms). Reset in each state's onEnter. */
+let stateElapsed = 0;
+
+// ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
+
+function updateGameplay(dt: number): void {
   // Advance AI cars every frame (they move regardless of player state).
   aiCarSystem.update(dt);
   aiCars = aiCarSystem.getCars();
@@ -119,12 +125,10 @@ function update(dt: number): void {
   playerZ += physics.speed * MPH_TO_MS * (dt / 1000);
 }
 
-function render(ctx: CanvasRenderingContext2D): void {
+function renderGameplay(ctx: CanvasRenderingContext2D): void {
   const playerX = steering.playerX;
 
   // Compute per-scanline curve offsets to determine vanishing-point sway.
-  // The offset at horizonY + 1 is the maximum accumulated offset and drives
-  // background parallax (farther layers shift proportionally less).
   const curveOffsets = computeCurveOffsets(
     LOGICAL_HEIGHT,
     HORIZON_Y,
@@ -174,11 +178,214 @@ function render(ctx: CanvasRenderingContext2D): void {
   }
 }
 
+/** Render the road scene at a fixed camera (no player movement) — used as backdrop for overlay screens. */
+function renderRoadBackdrop(ctx: CanvasRenderingContext2D): void {
+  const curveOffsets = computeCurveOffsets(
+    LOGICAL_HEIGHT,
+    HORIZON_Y,
+    CAMERA_DEPTH,
+    0,
+    getTrackCurve
+  );
+  const parallaxX = curveOffsets[HORIZON_Y + 1];
+  bgRenderer.render(ctx, parallaxX);
+  roadRenderer.render(ctx, 0, getTrackCurve, 0, 0);
+}
+
+// ─── State machine setup ─────────────────────────────────────────────────────
+
+const stateMachine = new GameStateMachine(GameState.ATTRACT);
+
+// ATTRACT — title screen shown while idle
+stateMachine.register(GameState.ATTRACT, {
+  onEnter: () => {
+    stateElapsed = 0;
+  },
+  update: (dt) => {
+    stateElapsed += dt;
+    // Brief grace period prevents accidental transitions right after entering state
+    if (stateElapsed > 300) {
+      const startPressed = input.isKeyDown('Enter') || input.isKeyDown('Space') || input.throttle;
+      if (startPressed) {
+        stateMachine.transition(GameState.COIN_INSERT);
+      }
+    }
+  },
+  render: (ctx) => {
+    renderRoadBackdrop(ctx);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('POLE POSITION', LOGICAL_WIDTH / 2, 80);
+    // Blink "PRESS ENTER" every 500 ms
+    if (Math.floor(stateElapsed / 500) % 2 === 0) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '8px monospace';
+      ctx.fillText('PRESS ENTER TO START', LOGICAL_WIDTH / 2, 120);
+    }
+    ctx.restore();
+  },
+});
+
+// COIN_INSERT — brief credit screen before qualifying
+stateMachine.register(GameState.COIN_INSERT, {
+  onEnter: () => {
+    stateElapsed = 0;
+  },
+  update: (dt) => {
+    stateElapsed += dt;
+    if (stateElapsed > 1500) {
+      stateMachine.transition(GameState.QUALIFYING);
+    }
+  },
+  render: (ctx) => {
+    renderRoadBackdrop(ctx);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('CREDIT  1', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+    ctx.restore();
+  },
+});
+
+// QUALIFYING — timed single lap; full gameplay active
+stateMachine.register(GameState.QUALIFYING, {
+  onEnter: () => {
+    playerZ = 0;
+    physics.reset();
+    steering.reset();
+    explosionState = new ExplosionState();
+    aiCarSystem.reset();
+    aiCars = aiCarSystem.getCars();
+    isOffRoad = false;
+    isColliding = false;
+  },
+  update: updateGameplay,
+  render: renderGameplay,
+});
+
+// GRID_DISPLAY — show earned starting grid position
+stateMachine.register(GameState.GRID_DISPLAY, {
+  onEnter: () => {
+    stateElapsed = 0;
+  },
+  update: (dt) => {
+    stateElapsed += dt;
+    if (stateElapsed > 3000) {
+      stateMachine.transition(GameState.GRAND_PRIX);
+    }
+  },
+  render: (ctx) => {
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('GRID POSITION', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 8);
+    ctx.fillText('YOU ARE IN 8th', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 8);
+    ctx.restore();
+  },
+});
+
+// GRAND_PRIX — multi-lap race; full gameplay active
+stateMachine.register(GameState.GRAND_PRIX, {
+  onEnter: () => {
+    playerZ = 0;
+    physics.reset();
+    steering.reset();
+    explosionState = new ExplosionState();
+    aiCarSystem.reset();
+    aiCars = aiCarSystem.getCars();
+    isOffRoad = false;
+    isColliding = false;
+  },
+  update: updateGameplay,
+  render: renderGameplay,
+});
+
+// RACE_COMPLETE — all laps finished
+stateMachine.register(GameState.RACE_COMPLETE, {
+  onEnter: () => {
+    stateElapsed = 0;
+  },
+  update: (dt) => {
+    stateElapsed += dt;
+    if (stateElapsed > 3000) {
+      stateMachine.transition(GameState.NAME_ENTRY);
+    }
+  },
+  render: (ctx) => {
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('RACE COMPLETE', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+    ctx.restore();
+  },
+});
+
+// GAME_OVER — timer expired before completing the qualifying lap or race
+stateMachine.register(GameState.GAME_OVER, {
+  onEnter: () => {
+    stateElapsed = 0;
+  },
+  update: (dt) => {
+    stateElapsed += dt;
+    if (stateElapsed > 3000) {
+      stateMachine.transition(GameState.ATTRACT);
+    }
+  },
+  render: (ctx) => {
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.fillStyle = '#ff2222';
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAME OVER', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+    ctx.restore();
+  },
+});
+
+// NAME_ENTRY — player enters 3-character initials for high score
+stateMachine.register(GameState.NAME_ENTRY, {
+  onEnter: () => {
+    stateElapsed = 0;
+  },
+  update: (dt) => {
+    stateElapsed += dt;
+    if (stateElapsed > 5000) {
+      stateMachine.transition(GameState.ATTRACT);
+    }
+  },
+  render: (ctx) => {
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('ENTER YOUR NAME', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+    ctx.restore();
+  },
+});
+
+// ─── Main entry point ─────────────────────────────────────────────────────────
+
 function main(): void {
   const ctx = setupCanvas();
   const loop = new GameLoop((dt) => {
-    update(dt);
-    render(ctx);
+    stateMachine.update(dt);
+    stateMachine.render(ctx);
   });
   loop.start();
 }
