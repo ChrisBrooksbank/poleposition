@@ -4,6 +4,7 @@ import {
   TRACK_LENGTH,
   SECTION_STARTS,
   getTrackCurve,
+  getTrackHill,
 } from '../src/track/fujiSpeedway';
 
 // ---------------------------------------------------------------------------
@@ -196,5 +197,101 @@ describe('getTrackCurve', () => {
     const sharpCurve = Math.abs(getTrackCurve(SECTION_STARTS[1] + 1));
     const gradualCurve = Math.abs(getTrackCurve(SECTION_STARTS[5] + 1));
     expect(sharpCurve).toBeGreaterThan(gradualCurve);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FUJI_SECTIONS — hill property
+// ---------------------------------------------------------------------------
+
+describe('FUJI_SECTIONS hill values', () => {
+  it('all sections have a finite hill value', () => {
+    for (const s of FUJI_SECTIONS) {
+      expect(typeof s.hill).toBe('number');
+      expect(isFinite(s.hill)).toBe(true);
+    }
+  });
+
+  it('main straight is flat (hill = 0)', () => {
+    expect(FUJI_SECTIONS[0].hill).toBe(0);
+  });
+
+  it('at least one section has a positive hill (uphill)', () => {
+    const hasUphill = FUJI_SECTIONS.some((s) => s.hill > 0);
+    expect(hasUphill).toBe(true);
+  });
+
+  it('at least one section has a negative hill (downhill)', () => {
+    const hasDownhill = FUJI_SECTIONS.some((s) => s.hill < 0);
+    expect(hasDownhill).toBe(true);
+  });
+
+  it('hill magnitudes are within a reasonable range (0 to 0.1)', () => {
+    for (const s of FUJI_SECTIONS) {
+      expect(Math.abs(s.hill)).toBeLessThanOrEqual(0.1);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getTrackHill
+// ---------------------------------------------------------------------------
+
+describe('getTrackHill', () => {
+  it('returns 0 at the start of the main straight', () => {
+    expect(getTrackHill(0)).toBe(0);
+  });
+
+  it('returns 0 midway through the main straight', () => {
+    const mid = FUJI_SECTIONS[0].length / 2;
+    expect(getTrackHill(mid)).toBe(0);
+  });
+
+  it('returns the sharp-right hill value just inside that section', () => {
+    const pos = SECTION_STARTS[1] + 1;
+    expect(getTrackHill(pos)).toBe(FUJI_SECTIONS[1].hill);
+  });
+
+  it('returns the quick-left hill value just inside that section', () => {
+    const pos = SECTION_STARTS[2] + 1;
+    expect(getTrackHill(pos)).toBe(FUJI_SECTIONS[2].hill);
+  });
+
+  it('returns the medium-right hill value inside that section', () => {
+    const pos = SECTION_STARTS[3] + 50;
+    expect(getTrackHill(pos)).toBe(FUJI_SECTIONS[3].hill);
+  });
+
+  it('returns the left-hairpin hill value inside that section', () => {
+    const pos = SECTION_STARTS[4] + 10;
+    expect(getTrackHill(pos)).toBe(FUJI_SECTIONS[4].hill);
+  });
+
+  it('returns the long-gradual-right hill value inside that section', () => {
+    const pos = SECTION_STARTS[5] + 500;
+    expect(getTrackHill(pos)).toBe(FUJI_SECTIONS[5].hill);
+  });
+
+  it('wraps correctly: position at TRACK_LENGTH maps to section 0', () => {
+    expect(getTrackHill(TRACK_LENGTH)).toBe(FUJI_SECTIONS[0].hill);
+  });
+
+  it('wraps correctly: second lap mirrors first lap', () => {
+    const positions = [0, 100, 1200, 1500, 3000, 4000];
+    for (const pos of positions) {
+      expect(getTrackHill(pos + TRACK_LENGTH)).toBe(getTrackHill(pos));
+    }
+  });
+
+  it('handles negative positions (wraps into last lap)', () => {
+    const hill = getTrackHill(-1);
+    expect(hill).toBe(FUJI_SECTIONS[5].hill);
+  });
+
+  it('returns a finite number for any position', () => {
+    const positions = [0, 1, 500, 1200, 2000, 4359, TRACK_LENGTH, TRACK_LENGTH * 5];
+    for (const pos of positions) {
+      expect(isFinite(getTrackHill(pos))).toBe(true);
+    }
   });
 });

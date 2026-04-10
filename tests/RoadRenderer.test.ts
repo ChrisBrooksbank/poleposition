@@ -12,8 +12,10 @@ import {
   CHECKER_COLORS,
   CHECKER_ZONE_LENGTH,
   CHECKER_COLS,
+  HILL_SKY_COLOR,
   segmentIndex,
   computeCurveOffsets,
+  computeHillOffsets,
   isInCheckerZone,
 } from '../src/renderer/RoadRenderer';
 
@@ -365,5 +367,91 @@ describe('isInCheckerZone', () => {
   it('returns true for small negative worldZ (wraps near lap end → within zone on next lap)', () => {
     // worldZ = -0.001 wraps to LAP - 0.001, which is NOT in the zone [0, CHECKER_ZONE_LENGTH)
     expect(isInCheckerZone(-0.001, LAP)).toBe(false);
+  });
+});
+
+describe('HILL_SKY_COLOR', () => {
+  it('is a non-empty CSS colour string', () => {
+    expect(typeof HILL_SKY_COLOR).toBe('string');
+    expect(HILL_SKY_COLOR.length).toBeGreaterThan(0);
+  });
+});
+
+describe('computeHillOffsets', () => {
+  const HEIGHT = 224;
+  const horizonY = HORIZON_Y; // 112
+
+  it('returns a Float32Array of length equal to height', () => {
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0);
+    expect(offsets).toBeInstanceOf(Float32Array);
+    expect(offsets.length).toBe(HEIGHT);
+  });
+
+  it('returns all-zero offsets when getHill always returns 0', () => {
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0);
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsets[y]).toBeCloseTo(0, 10);
+    }
+  });
+
+  it('entries at or above the horizon are always zero', () => {
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    for (let y = 0; y <= horizonY; y++) {
+      expect(offsets[y]).toBe(0);
+    }
+  });
+
+  it('positive hill: far strips (near horizon) have larger negative offset than near strips', () => {
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    // Far strips (small y, near horizon) should have larger magnitude negative offset
+    const nearOffset = offsets[HEIGHT - 1]; // closest scanline — small H accumulated
+    const farOffset = offsets[horizonY + 1]; // farthest — large H accumulated
+    expect(farOffset).toBeLessThan(nearOffset); // farther = more negative
+  });
+
+  it('positive hill produces negative offsets (strips shift toward horizon)', () => {
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    // All offsets in the road area should be ≤ 0 (uphill shifts strips upward on screen)
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsets[y]).toBeLessThanOrEqual(0);
+    }
+  });
+
+  it('negative hill produces non-negative offsets (strips shift away from horizon)', () => {
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => -0.01);
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsets[y]).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('doubled hill strength doubles the offsets', () => {
+    const offsets1 = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    const offsets2 = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.02);
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsets2[y]).toBeCloseTo(offsets1[y] * 2, 5);
+    }
+  });
+
+  it('a large uphill gradient causes the farthest strip to shift above the horizon', () => {
+    // With large enough hill, the farthest strip (y = horizonY + 1) should have
+    // effectiveY = y + offset < horizonY (i.e. offset < -(y - horizonY) = -1)
+    const offsets = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.1);
+    const farthestY = horizonY + 1;
+    const effectiveY = farthestY + offsets[farthestY];
+    expect(effectiveY).toBeLessThan(horizonY);
+  });
+
+  it('playerZ shifts which segment hill values are sampled', () => {
+    // Hill returns 1 for worldZ < 5, 0 otherwise
+    const threshold = 5;
+    const hill = (wz: number) => (wz < threshold ? 1 : 0);
+    // At playerZ=100, all worldZ + 100 > threshold → hill = 0 everywhere → all zero
+    const offsetsAt100 = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 100, hill);
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsetsAt100[y]).toBeCloseTo(0, 10);
+    }
+    // At playerZ=0, near strips have worldZ < 5 → non-zero offsets
+    const offsetsAt0 = computeHillOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, hill);
+    expect(offsetsAt0[HEIGHT - 1]).toBeLessThan(0); // some accumulation even at near strip
   });
 });

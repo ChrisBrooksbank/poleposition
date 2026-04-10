@@ -29,6 +29,19 @@ export interface TrackSection {
    * Zero = straight.
    */
   curve: number;
+  /**
+   * Hill gradient (slope) for this section.
+   * Positive = uphill ahead (road rises, crest may obscure road).
+   * Negative = downhill ahead (road dips into the distance).
+   * Zero = flat.
+   *
+   * Magnitude reference (tuned for 256×224 resolution rendering):
+   *   0        → flat road
+   *   ±0.02    → gentle slope (barely noticeable, ~2px Y-shift in mid-distance)
+   *   ±0.04    → moderate hill (road visibly rises, top ~3 scanlines hidden at crest)
+   *   ±0.06    → steep hill (road rises sharply, top ~5 scanlines hidden at crest)
+   */
+  hill: number;
 }
 
 /**
@@ -44,12 +57,12 @@ export interface TrackSection {
  *   6. Long gradual right curve back to main straight
  */
 export const FUJI_SECTIONS: readonly TrackSection[] = [
-  { name: 'Main Straight', length: 1200, curve: 0.0 },
-  { name: 'Sharp Right', length: 300, curve: +0.06 },
-  { name: 'Quick Left', length: 200, curve: -0.05 },
-  { name: 'Medium Right', length: 400, curve: +0.035 },
-  { name: 'Left Hairpin', length: 260, curve: -0.08 },
-  { name: 'Long Gradual Right', length: 2000, curve: +0.015 },
+  { name: 'Main Straight', length: 1200, curve: 0.0, hill: 0.0 },
+  { name: 'Sharp Right', length: 300, curve: +0.06, hill: +0.04 },
+  { name: 'Quick Left', length: 200, curve: -0.05, hill: -0.025 },
+  { name: 'Medium Right', length: 400, curve: +0.035, hill: +0.02 },
+  { name: 'Left Hairpin', length: 260, curve: -0.08, hill: -0.04 },
+  { name: 'Long Gradual Right', length: 2000, curve: +0.015, hill: 0.0 },
 ] as const;
 
 /**
@@ -102,5 +115,30 @@ export function getTrackCurve(worldZ: number): number {
   }
 
   // Should be unreachable (pos is always ≥ 0 and SECTION_STARTS[0] = 0).
+  return 0;
+}
+
+/**
+ * Returns the hill gradient at a given absolute world-Z position.
+ *
+ * Positive = uphill ahead (road rises, hill crests may obscure the road).
+ * Negative = downhill ahead (road dips into the distance).
+ * Zero = flat.
+ *
+ * Mirrors the structure of {@link getTrackCurve} and is used by
+ * {@link computeHillOffsets} in RoadRenderer.
+ *
+ * @param worldZ  Absolute world-Z position in metres (playerZ + scanline Z).
+ * @returns       Signed hill gradient for that position.
+ */
+export function getTrackHill(worldZ: number): number {
+  const pos = ((worldZ % TRACK_LENGTH) + TRACK_LENGTH) % TRACK_LENGTH;
+
+  for (let i = FUJI_SECTIONS.length - 1; i >= 0; i--) {
+    if (pos >= SECTION_STARTS[i]) {
+      return FUJI_SECTIONS[i].hill;
+    }
+  }
+
   return 0;
 }

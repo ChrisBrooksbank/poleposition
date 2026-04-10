@@ -63,6 +63,14 @@ export const ROAD_COLORS: readonly [string, string] = ['#6b6b6b', '#787878'];
 export const RUMBLE_COLORS: readonly [string, string] = ['#cc2222', '#ffffff'];
 
 /**
+ * Sky colour used to pre-fill the road area when hills are active.
+ *
+ * Matches the horizon colour from BackgroundRenderer so that hill crests
+ * (where scanlines are skipped) blend seamlessly into the sky layer.
+ */
+export const HILL_SKY_COLOR = '#7ab8e8';
+
+/**
  * Returns the lateral curve strength at a given world-Z position.
  *
  * Positive values = curve to the right; negative = curve to the left.
@@ -70,6 +78,17 @@ export const RUMBLE_COLORS: readonly [string, string] = ['#cc2222', '#ffffff'];
  * accumulated per unit of world distance at that position.
  */
 export type CurveFunction = (worldZ: number) => number;
+
+/**
+ * Returns the hill gradient at a given world-Z position.
+ *
+ * Positive values = uphill ahead (road rises, crests obscure road beyond).
+ * Negative values = downhill ahead (road dips into the distance).
+ * Zero = flat.
+ *
+ * Used by {@link computeHillOffsets} to compute per-scanline Y offsets.
+ */
+export type HillFunction = (worldZ: number) => number;
 
 /**
  * Compute per-scanline horizontal screen-space offsets that implement a
@@ -161,6 +180,69 @@ export function isInCheckerZone(worldZ: number, lapLength: number): boolean {
   if (lapLength <= 0) return false;
   const pos = ((worldZ % lapLength) + lapLength) % lapLength;
   return pos < CHECKER_ZONE_LENGTH;
+}
+
+/**
+ * Compute per-scanline vertical screen-space Y offsets that implement a
+ * pseudo-3D hill appearance.
+ *
+ * A strip at world depth Z that sits on ground at height H above the flat
+ * plane projects to:
+ *
+ *   effectiveScreenY = horizonY + (1 − H) × depth
+ *
+ * where depth = screenY_flat − horizonY and H is the cumulative hill height
+ * (integral of getHill from the camera to Z).
+ *
+ * This rearranges to:
+ *
+ *   yOffset = effectiveScreenY − screenY_flat = −H × depth
+ *
+ * When yOffset is applied, strips on uphill sections shift toward the
+ * horizon (smaller screen Y), and strips on downhill sections shift away
+ * from it.  If effectiveScreenY falls below horizonY the strip is hidden
+ * by a hill crest; the caller should skip drawing it and show sky instead.
+ *
+ * Closed-form note: for a constant hill gradient h over the visible range,
+ *   yOffset(y) = −h × cameraDepth × (maxDepth − depth)
+ * which grows linearly as depth decreases (strip moves farther from camera).
+ *
+ * @param height      Canvas height in pixels.
+ * @param horizonY    Screen Y of the horizon line.
+ * @param cameraDepth Camera depth constant (same value used in projection).
+ * @param playerZ     Player's current world-Z position used for getHill sampling.
+ * @param getHill     Hill-gradient function (see {@link HillFunction}).
+ * @returns           Float32Array of length `height` indexed by screen Y.
+ *                    Entries for y ≤ horizonY are always 0.
+ */
+export function computeHillOffsets(
+  height: number,
+  horizonY: number,
+  cameraDepth: number,
+  playerZ: number,
+  getHill: HillFunction
+): Float32Array {
+  const offsets = new Float32Array(height);
+  const maxDepth = height - horizonY;
+  let H = 0; // cumulative normalised hill height
+
+  // Iterate from near (bottom) to far (toward horizon), accumulating H.
+  for (let y = height - 1; y > horizonY; y--) {
+    const depth = y - horizonY;
+    const worldZ = (cameraDepth * maxDepth) / depth;
+
+    const nextDepth = depth - 1;
+    const nextWorldZ = nextDepth > 0 ? (cameraDepth * maxDepth) / nextDepth : worldZ * 2;
+    const deltaZ = nextWorldZ - worldZ;
+
+    // Accumulate hill gradient × distance increment.
+    H += getHill(worldZ + playerZ) * deltaZ;
+
+    // Y-offset for this scanline: uphill (positive H) shifts strip toward horizon.
+    offsets[y] = -H * depth;
+  }
+
+  return offsets;
 }
 
 /** Data for a single projected horizontal strip. */
@@ -266,6 +348,13 @@ export class RoadRenderer {
    * Far strips receive a larger offset than near strips, so the vanishing point
    * sways side-to-side on curved sections.
    *
+   * When `getHill` is supplied, per-scanline vertical Y offsets are applied
+   * (see {@link computeHillOffsets}).  Uphill sections shift far strips toward
+   * the horizon; when the accumulated offset pushes a strip above the horizon
+   * line that strip is skipped, creating a hill-crest effect where the road
+   * ahead is obscured.  The road area is pre-filled with {@link HILL_SKY_COLOR}
+   * so skipped strips show sky rather than stale frame content.
+   *
    * @param ctx       Canvas 2D rendering context.
    * @param playerZ   Player's absolute world-Z position (normalised world units).
    *                  Scrolls the segment colour pattern and curve lookup as the
@@ -279,13 +368,16 @@ export class RoadRenderer {
    *                  scale=1.  0 = road centre; positive = right of centre.
    *                  Shifts the rendered road left/right so the car's position
    *                  is reflected visually.  Defaults to 0.
+   * @param getHill   Optional hill-gradient function.  When supplied, per-scanline
+   *                  Y offsets produce hill crests that obscure the road ahead.
    */
   render(
     ctx: CanvasRenderingContext2D,
     playerZ = 0,
     getCurve?: CurveFunction,
     lapLength = 0,
-    playerX = 0
+    playerX = 0,
+    getHill?: HillFunction
   ): void {
     const maxDepth = this.height - this.horizonY;
 
@@ -295,7 +387,27 @@ export class RoadRenderer {
         ? computeCurveOffsets(this.height, this.horizonY, this.cameraDepth, playerZ, getCurve)
         : new Float32Array(this.height);
 
+    // Pre-compute per-scanline hill Y offsets (all zeros when road is flat).
+    const hillYOffsets: Float32Array =
+      getHill != null
+        ? computeHillOffsets(this.height, this.horizonY, this.cameraDepth, playerZ, getHill)
+        : new Float32Array(this.height);
+
+    // When hills are active, pre-fill the road area with the sky horizon colour
+    // so that scanlines skipped by hill crests show sky rather than stale pixels.
+    if (getHill != null) {
+      ctx.fillStyle = HILL_SKY_COLOR;
+      ctx.fillRect(0, this.horizonY, this.width, this.height - this.horizonY);
+    }
+
     for (let y = this.horizonY + 1; y < this.height; y++) {
+      // Compute the actual screen row where this strip is painted after hill offset.
+      // y determines world-space Z (and hence colours/textures); drawY is where pixels land.
+      const drawY = Math.round(y + hillYOffsets[y]);
+
+      // Skip strips hidden by a hill crest (projected above horizon) or below screen.
+      if (drawY <= this.horizonY || drawY >= this.height) continue;
+
       // Subtract playerX so when the car moves right the road shifts left.
       const { roadLeft, roadRight, scale } = this.projectScanline(y, xOffsets[y] - playerX);
 
@@ -325,7 +437,7 @@ export class RoadRenderer {
       // Grass — left of road
       if (left > 0) {
         ctx.fillStyle = grassColor;
-        ctx.fillRect(0, y, left, 1);
+        ctx.fillRect(0, drawY, left, 1);
       }
 
       if (roadWidth > 0) {
@@ -337,7 +449,7 @@ export class RoadRenderer {
 
         // Left rumble strip
         ctx.fillStyle = rumbleColor;
-        ctx.fillRect(left, y, rumble, 1);
+        ctx.fillRect(left, drawY, rumble, 1);
 
         const midLeft = left + rumble;
         const midRight = right - rumble;
@@ -355,12 +467,12 @@ export class RoadRenderer {
               const pw = Math.max(1, Math.round(cx2) - px);
               const isBlack = (col + checkerRow) % 2 === 0;
               ctx.fillStyle = CHECKER_COLORS[isBlack ? 0 : 1];
-              ctx.fillRect(px, y, pw, 1);
+              ctx.fillRect(px, drawY, pw, 1);
             }
           } else {
             // Road surface
             ctx.fillStyle = roadColor;
-            ctx.fillRect(midLeft, y, midRight - midLeft, 1);
+            ctx.fillRect(midLeft, drawY, midRight - midLeft, 1);
 
             // Centre-line dash: drawn only on even-index segments to create gaps.
             if (seg === 0 && midRight - midLeft > 2) {
@@ -370,7 +482,7 @@ export class RoadRenderer {
               const dr = Math.min(midRight, centerX + dashHalf);
               if (dr > dl) {
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(dl, y, dr - dl, 1);
+                ctx.fillRect(dl, drawY, dr - dl, 1);
               }
             }
           }
@@ -379,14 +491,14 @@ export class RoadRenderer {
         // Right rumble strip (only if there is space for it separately from left)
         if (right - rumble > left + rumble) {
           ctx.fillStyle = rumbleColor;
-          ctx.fillRect(right - rumble, y, rumble, 1);
+          ctx.fillRect(right - rumble, drawY, rumble, 1);
         }
       }
 
       // Grass — right of road
       if (right < this.width) {
         ctx.fillStyle = grassColor;
-        ctx.fillRect(right, y, this.width - right, 1);
+        ctx.fillRect(right, drawY, this.width - right, 1);
       }
     }
   }

@@ -11,7 +11,7 @@ import {
 } from './renderer/RoadRenderer';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer';
 import { BillboardRenderer } from './renderer/BillboardRenderer';
-import { getTrackCurve } from './track/fujiSpeedway';
+import { getTrackCurve, getTrackHill } from './track/fujiSpeedway';
 import { InputHandler } from './input/InputHandler';
 import { PlayerPhysics } from './physics/PlayerPhysics';
 import { SteeringPhysics, MPH_TO_MS } from './physics/SteeringPhysics';
@@ -247,7 +247,7 @@ function renderGameplay(ctx: CanvasRenderingContext2D): void {
   bgRenderer.render(ctx, parallaxX);
 
   // Render pseudo-3D road (scanline perspective projection)
-  roadRenderer.render(ctx, playerZ, getTrackCurve, 0, playerX);
+  roadRenderer.render(ctx, playerZ, getTrackCurve, 0, playerX, getTrackHill);
 
   // Render puddle sprites on the road surface (before cars/billboards so cars overlay)
   puddleRenderer.render(ctx, playerZ, getTrackCurve, playerX);
@@ -297,7 +297,7 @@ function renderRoadBackdrop(ctx: CanvasRenderingContext2D): void {
   );
   const parallaxX = curveOffsets[HORIZON_Y + 1];
   bgRenderer.render(ctx, parallaxX);
-  roadRenderer.render(ctx, 0, getTrackCurve, 0, 0);
+  roadRenderer.render(ctx, 0, getTrackCurve, 0, 0, getTrackHill);
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -346,7 +346,7 @@ stateMachine.register(GameState.ATTRACT, {
       );
       const parallaxX = curveOffsets[HORIZON_Y + 1];
       bgRenderer.render(ctx, parallaxX);
-      roadRenderer.render(ctx, attractMode.demoZ, getTrackCurve, 0, 0);
+      roadRenderer.render(ctx, attractMode.demoZ, getTrackCurve, 0, 0, getTrackHill);
 
       // Dim overlay so "PRESS ENTER" is still visible
       ctx.save();
