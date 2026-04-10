@@ -36,6 +36,7 @@ import { AudioSystem } from './audio/AudioSystem';
 import { EngineSound } from './audio/EngineSound';
 import { TireScreech } from './audio/TireScreech';
 import { CollisionSound } from './audio/CollisionSound';
+import { DiscreteSFX } from './audio/DiscreteSFX';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -131,6 +132,8 @@ const engineSound = new EngineSound(audioSystem);
 const tireScreech = new TireScreech(audioSystem);
 /** Collision sound — LFSR noise burst with ~3s decay envelope, fired on impact. */
 const collisionSound = new CollisionSound(audioSystem);
+/** Discrete SFX — one-shot jingles, beeps, and the looping grass rumble. */
+const discreteSFX = new DiscreteSFX(audioSystem);
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -193,6 +196,9 @@ function updateGameplay(dt: number): void {
   // Update tire screech intensity: absolute steering input, suppressed off-road
   const steerInput = (input.left ? 1 : 0) + (input.right ? 1 : 0);
   tireScreech.update(steerInput, isOffRoad);
+
+  // Update grass rumble: on when off-road, silent on tarmac
+  discreteSFX.updateGrassRumble(isOffRoad);
 }
 
 function renderGameplay(ctx: CanvasRenderingContext2D): void {
@@ -346,6 +352,7 @@ stateMachine.register(GameState.ATTRACT, {
 stateMachine.register(GameState.COIN_INSERT, {
   onEnter: () => {
     stateElapsed = 0;
+    discreteSFX.triggerCoinInsert();
   },
   update: (dt) => {
     stateElapsed += dt;
@@ -381,6 +388,8 @@ stateMachine.register(GameState.QUALIFYING, {
     scoreTracker.reset();
     engineSound.start();
     tireScreech.start();
+    discreteSFX.startGrassRumble();
+    discreteSFX.triggerQualifyingFanfare();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -389,6 +398,7 @@ stateMachine.register(GameState.QUALIFYING, {
     if (qualifyingState.outcome === QualifyingOutcome.QUALIFIED) {
       scoreTracker.addQualifyingBonus(qualifyingState.gridPosition);
       gridDisplayState.reset(qualifyingState.gridPosition);
+      discreteSFX.triggerQualifyingComplete(qualifyingState.gridPosition === 1);
       stateMachine.transition(GameState.GRID_DISPLAY);
     } else if (qualifyingState.outcome === QualifyingOutcome.FAILED) {
       stateMachine.transition(GameState.GAME_OVER);
@@ -482,6 +492,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
     );
     engineSound.start();
     tireScreech.start();
+    discreteSFX.startGrassRumble();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -538,6 +549,8 @@ stateMachine.register(GameState.RACE_COMPLETE, {
     // raceCompleteState was already reset in GRAND_PRIX's update when COMPLETE
     engineSound.stop();
     tireScreech.stop();
+    discreteSFX.stopGrassRumble();
+    discreteSFX.triggerRaceComplete();
   },
   update: (dt) => {
     raceCompleteState.update(dt);
@@ -588,6 +601,7 @@ stateMachine.register(GameState.GAME_OVER, {
     stateElapsed = 0;
     engineSound.stop();
     tireScreech.stop();
+    discreteSFX.stopGrassRumble();
   },
   update: (dt) => {
     stateElapsed += dt;
