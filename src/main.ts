@@ -37,6 +37,7 @@ import { EngineSound } from './audio/EngineSound';
 import { TireScreech } from './audio/TireScreech';
 import { CollisionSound } from './audio/CollisionSound';
 import { DiscreteSFX } from './audio/DiscreteSFX';
+import { VoiceAnnouncements } from './audio/VoiceAnnouncements';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -134,6 +135,8 @@ const tireScreech = new TireScreech(audioSystem);
 const collisionSound = new CollisionSound(audioSystem);
 /** Discrete SFX — one-shot jingles, beeps, and the looping grass rumble. */
 const discreteSFX = new DiscreteSFX(audioSystem);
+/** Voice announcements — retro synthesized "Qualifying Start" and "Grand Prix Start". */
+const voiceAnnouncements = new VoiceAnnouncements(audioSystem);
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -390,6 +393,7 @@ stateMachine.register(GameState.QUALIFYING, {
     tireScreech.start();
     discreteSFX.startGrassRumble();
     discreteSFX.triggerQualifyingFanfare();
+    voiceAnnouncements.triggerQualifyingStart();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -493,6 +497,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
     engineSound.start();
     tireScreech.start();
     discreteSFX.startGrassRumble();
+    voiceAnnouncements.triggerGrandPrixStart();
   },
   update: (dt) => {
     updateGameplay(dt);
