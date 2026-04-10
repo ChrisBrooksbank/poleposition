@@ -11,12 +11,16 @@
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "check": "npm run typecheck && npm run lint && npm run test:run"
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run test:run"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.2",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.58.1",
     "vite": "^5.4.0",
