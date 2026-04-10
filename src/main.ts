@@ -28,6 +28,7 @@ import { GridDisplayState } from './state/GridDisplayState';
 import { GrandPrixState, GrandPrixOutcome } from './state/GrandPrixState';
 import { RaceCompleteState } from './state/RaceCompleteState';
 import { ScoreTracker } from './state/ScoreTracker';
+import { HUDRenderer } from './renderer/HUDRenderer';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
@@ -103,6 +104,9 @@ const raceCompleteState = new RaceCompleteState();
 
 /** Score tracker — accumulates points for distance, overtakes, and bonuses. */
 const scoreTracker = new ScoreTracker();
+
+/** HUD renderer — draws speed, timer, score, lap, and race position overlays. */
+const hudRenderer = new HUDRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -370,22 +374,18 @@ stateMachine.register(GameState.QUALIFYING, {
       ctx.restore();
     }
 
-    // Countdown timer display
-    const secs = qualifyingState.timerSeconds;
-    ctx.save();
-    ctx.fillStyle = secs <= 10 ? '#ff4444' : '#ffffff';
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(`TIME ${String(secs).padStart(3, ' ')}`, LOGICAL_WIDTH - 4, 12);
-    ctx.restore();
-
-    // Score display
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${String(scoreTracker.score).padStart(6, '0')}`, 4, 12);
-    ctx.restore();
+    // HUD overlay: score, timer, speed, and race position
+    const racePos = HUDRenderer.computeRacePosition(
+      playerZ,
+      aiCars.map((c) => c.z),
+      TRACK_LENGTH
+    );
+    hudRenderer.render(ctx, {
+      score: scoreTracker.score,
+      timerSeconds: qualifyingState.timerSeconds,
+      speedMph: physics.speed,
+      racePosition: racePos,
+    });
   },
 });
 
@@ -478,30 +478,20 @@ stateMachine.register(GameState.GRAND_PRIX, {
       ctx.restore();
     }
 
-    // Countdown timer display
-    const secs = grandPrixState.timerSeconds;
-    ctx.save();
-    ctx.fillStyle = secs <= 10 ? '#ff4444' : '#ffffff';
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(`TIME ${String(secs).padStart(3, ' ')}`, LOGICAL_WIDTH - 4, 12);
-    ctx.restore();
-
-    // Lap counter display
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`LAP ${grandPrixState.currentLap}/${grandPrixState.totalLaps}`, 4, 12);
-    ctx.restore();
-
-    // Score display
-    ctx.save();
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 8px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${String(scoreTracker.score).padStart(6, '0')}`, 4, 22);
-    ctx.restore();
+    // HUD overlay: score, timer, speed, lap counter, and race position
+    const racePos = HUDRenderer.computeRacePosition(
+      playerZ,
+      aiCars.map((c) => c.z),
+      TRACK_LENGTH
+    );
+    hudRenderer.render(ctx, {
+      score: scoreTracker.score,
+      timerSeconds: grandPrixState.timerSeconds,
+      speedMph: physics.speed,
+      lapCurrent: grandPrixState.currentLap,
+      lapTotal: grandPrixState.totalLaps,
+      racePosition: racePos,
+    });
   },
 });
 

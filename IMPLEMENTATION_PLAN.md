@@ -51,7 +51,7 @@
 ### Phase 6: Scoring & HUD
 
 - [x] Implement scoring: 10 pts/meter driven, +50 pts per AI car fully overtaken, qualifying position bonus (4000/2000/1400/1000/800/600/400/200), +200 pts/sec remaining at race end (spec: game-flow.md)
-- [ ] Implement HUD overlay: speed (MPH/KPH), countdown timer, lap number/total, current score, race position "YOU ARE IN Xth" (spec: game-flow.md)
+- [x] Implement HUD overlay: speed (MPH/KPH), countdown timer, lap number/total, current score, race position "YOU ARE IN Xth" (spec: game-flow.md)
 - [ ] Implement high score system: localStorage persistence, 3-initial name entry screen (keyboard navigation), high score table display, three ranking music tiers (spec: game-flow.md)
 
 ### Phase 7: Audio System
