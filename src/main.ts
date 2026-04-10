@@ -35,6 +35,7 @@ import { NameEntryState, NAME_ENTRY_LETTERS } from './state/NameEntryState';
 import { AudioSystem } from './audio/AudioSystem';
 import { EngineSound } from './audio/EngineSound';
 import { TireScreech } from './audio/TireScreech';
+import { CollisionSound } from './audio/CollisionSound';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -128,6 +129,8 @@ const audioSystem = new AudioSystem();
 const engineSound = new EngineSound(audioSystem);
 /** Tire screech — band-pass filtered noise driven by steering input. */
 const tireScreech = new TireScreech(audioSystem);
+/** Collision sound — LFSR noise burst with ~3s decay envelope, fired on impact. */
+const collisionSound = new CollisionSound(audioSystem);
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -169,6 +172,7 @@ function updateGameplay(dt: number): void {
   // Trigger explosion on fresh collision
   if (isColliding) {
     explosionState.trigger();
+    collisionSound.trigger();
   }
 
   // Advance position along the track (speed in MPH → metres per second)
