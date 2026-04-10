@@ -23,6 +23,8 @@ import { AICarSystem } from './ai/AICarSystem';
 import { AICarRenderer } from './renderer/AICarRenderer';
 import { GameStateMachine, GameState } from './state/GameStateMachine';
 import { AttractMode, AttractPhase } from './state/AttractMode';
+import { QualifyingState, QualifyingOutcome } from './state/QualifyingState';
+import { TRACK_LENGTH } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -82,6 +84,16 @@ let stateElapsed = 0;
 
 /** Attract mode cycle controller (title ↔ demo phases). */
 const attractMode = new AttractMode();
+
+/** Qualifying lap state — timer, lap detection, grid position. */
+const qualifyingState = new QualifyingState();
+
+/**
+ * Grid position (1–8) earned during qualifying.
+ * Set when the player qualifies; read by GRID_DISPLAY render.
+ * 0 = not yet determined.
+ */
+let qualifyingGridPosition = 0;
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -196,6 +208,15 @@ function renderRoadBackdrop(ctx: CanvasRenderingContext2D): void {
   roadRenderer.render(ctx, 0, getTrackCurve, 0, 0);
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Return the English ordinal string for a positive integer (1→"1st", 2→"2nd", …). */
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
+
 // ─── State machine setup ─────────────────────────────────────────────────────
 
 const stateMachine = new GameStateMachine(GameState.ATTRACT);
@@ -301,9 +322,44 @@ stateMachine.register(GameState.QUALIFYING, {
     aiCars = aiCarSystem.getCars();
     isOffRoad = false;
     isColliding = false;
+    qualifyingState.reset();
+    qualifyingGridPosition = 0;
   },
-  update: updateGameplay,
-  render: renderGameplay,
+  update: (dt) => {
+    updateGameplay(dt);
+    qualifyingState.update(dt, playerZ, TRACK_LENGTH);
+
+    if (qualifyingState.outcome === QualifyingOutcome.QUALIFIED) {
+      qualifyingGridPosition = qualifyingState.gridPosition;
+      stateMachine.transition(GameState.GRID_DISPLAY);
+    } else if (qualifyingState.outcome === QualifyingOutcome.FAILED) {
+      stateMachine.transition(GameState.GAME_OVER);
+    }
+  },
+  render: (ctx) => {
+    renderGameplay(ctx);
+
+    // "QUALIFYING START" announcement banner
+    if (qualifyingState.showAnnouncement) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, HORIZON_Y + 8, LOGICAL_WIDTH, 20);
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('QUALIFYING START', LOGICAL_WIDTH / 2, HORIZON_Y + 22);
+      ctx.restore();
+    }
+
+    // Countdown timer display
+    const secs = qualifyingState.timerSeconds;
+    ctx.save();
+    ctx.fillStyle = secs <= 10 ? '#ff4444' : '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`TIME ${String(secs).padStart(3, ' ')}`, LOGICAL_WIDTH - 4, 12);
+    ctx.restore();
+  },
 });
 
 // GRID_DISPLAY — show earned starting grid position
@@ -325,7 +381,11 @@ stateMachine.register(GameState.GRID_DISPLAY, {
     ctx.font = '8px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('GRID POSITION', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 8);
-    ctx.fillText('YOU ARE IN 8th', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 8);
+    const posText =
+      qualifyingGridPosition > 0
+        ? `YOU ARE IN ${ordinal(qualifyingGridPosition)}`
+        : 'DID NOT QUALIFY';
+    ctx.fillText(posText, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 8);
     ctx.restore();
   },
 });

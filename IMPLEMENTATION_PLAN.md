@@ -43,7 +43,7 @@
 
 - [x] Implement state machine with states: ATTRACT, COIN_INSERT, QUALIFYING, GRID_DISPLAY, GRAND_PRIX, RACE_COMPLETE, GAME_OVER, NAME_ENTRY — wired to game loop update/render dispatch (spec: game-flow.md)
 - [x] Implement attract mode: idle demo screen / title display cycling until input (spec: game-flow.md)
-- [ ] Implement qualifying lap: 90s countdown timer (configurable 90/100/110/120s), detect lap completion, compare time against 8 position thresholds, "Qualifying Start" trigger, fail path if time expires (spec: game-flow.md)
+- [x] Implement qualifying lap: 90s countdown timer (configurable 90/100/110/120s), detect lap completion, compare time against 8 position thresholds, "Qualifying Start" trigger, fail path if time expires (spec: game-flow.md)
 - [ ] Implement grid position display: show "YOU ARE IN Xth" with earned grid slot after qualifying (spec: game-flow.md)
 - [ ] Implement Grand Prix race: multi-lap (default 4), 75s initial timer + bonus time per lap (+51/+57/+61s), "Grand Prix Start" trigger, lap counter, game over on timer expiry (spec: game-flow.md)
 - [ ] Implement race complete state: trigger when all laps finished, show time bonus, transition to name entry (spec: game-flow.md)
