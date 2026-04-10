@@ -41,6 +41,21 @@ export const RUMBLE_WIDTH = 8;
 /** Two grass shades (dark, light) that alternate per segment. */
 export const GRASS_COLORS: readonly [string, string] = ['#4a7c1e', '#5a8e28'];
 
+/** Checker square colours (black, white) used at the start/finish line. */
+export const CHECKER_COLORS: readonly [string, string] = ['#000000', '#ffffff'];
+
+/**
+ * Length of the start/finish checker zone in world-z units.
+ * Spans 4 visual segments so the checkers are visible as the player approaches.
+ */
+export const CHECKER_ZONE_LENGTH = SEGMENT_LENGTH * 4;
+
+/**
+ * Number of checker columns rendered across the road at the start/finish line.
+ * Each column alternates between black and white (rows alternate by depth).
+ */
+export const CHECKER_COLS = 4;
+
 /** Two road-surface shades (dark, light) that alternate per segment. */
 export const ROAD_COLORS: readonly [string, string] = ['#6b6b6b', '#787878'];
 
@@ -129,6 +144,23 @@ export function segmentIndex(worldZ: number, segmentLength = SEGMENT_LENGTH): 0 
   // Ensure positive before modulo to handle negative playerZ values gracefully.
   const idx = Math.floor(Math.abs(worldZ) / segmentLength) % 2;
   return idx as 0 | 1;
+}
+
+/**
+ * Returns true when a world-Z position falls within the start/finish checker
+ * zone at the lap boundary.
+ *
+ * The checker zone starts at worldZ = 0 (mod lapLength) and extends for
+ * {@link CHECKER_ZONE_LENGTH} world units.  The caller should supply a
+ * positive `lapLength`; passing 0 or negative always returns false.
+ *
+ * @param worldZ    Absolute world Z (playerZ + scanline z).
+ * @param lapLength Total lap length in world-z units.
+ */
+export function isInCheckerZone(worldZ: number, lapLength: number): boolean {
+  if (lapLength <= 0) return false;
+  const pos = ((worldZ % lapLength) + lapLength) % lapLength;
+  return pos < CHECKER_ZONE_LENGTH;
 }
 
 /** Data for a single projected horizontal strip. */
@@ -240,8 +272,16 @@ export class RoadRenderer {
    *                  car moves forward.
    * @param getCurve  Optional curve-strength function.  When omitted the road
    *                  is rendered as a straight.
+   * @param lapLength Total lap length in world-z units.  When > 0 the start/finish
+   *                  checkered pattern is drawn at the lap boundary (worldZ = 0 mod
+   *                  lapLength).  Defaults to 0 (no checker rendered).
    */
-  render(ctx: CanvasRenderingContext2D, playerZ = 0, getCurve?: CurveFunction): void {
+  render(
+    ctx: CanvasRenderingContext2D,
+    playerZ = 0,
+    getCurve?: CurveFunction,
+    lapLength = 0
+  ): void {
     const maxDepth = this.height - this.horizonY;
 
     // Pre-compute per-scanline curve offsets (all zeros when road is straight).
@@ -263,6 +303,14 @@ export class RoadRenderer {
       const grassColor = GRASS_COLORS[seg];
       const roadColor = ROAD_COLORS[seg];
       const rumbleColor = RUMBLE_COLORS[seg];
+
+      // Start/finish checker zone detection.
+      // When lapLength > 0, determine whether this scanline falls within the
+      // checker zone and which row (0 or 1) it belongs to.  Row alternates
+      // half-way through the zone so the checker reads as a 2D grid of squares.
+      const lapPos = lapLength > 0 ? (((z + playerZ) % lapLength) + lapLength) % lapLength : -1;
+      const inChecker = lapPos >= 0 && lapPos < CHECKER_ZONE_LENGTH;
+      const checkerRow = inChecker ? Math.floor((lapPos / CHECKER_ZONE_LENGTH) * 2) % 2 : 0;
 
       const left = Math.max(0, Math.round(roadLeft));
       const right = Math.min(this.width, Math.round(roadRight));
@@ -289,19 +337,35 @@ export class RoadRenderer {
         const midRight = right - rumble;
 
         if (midRight > midLeft) {
-          // Road surface
-          ctx.fillStyle = roadColor;
-          ctx.fillRect(midLeft, y, midRight - midLeft, 1);
+          if (inChecker) {
+            // Start/finish line: render alternating black/white checker columns.
+            // Columns and rows together form a 2D grid of squares.
+            const roadPxWidth = midRight - midLeft;
+            const colWidth = roadPxWidth / CHECKER_COLS;
+            for (let col = 0; col < CHECKER_COLS; col++) {
+              const cx = midLeft + col * colWidth;
+              const cx2 = midLeft + (col + 1) * colWidth;
+              const px = Math.round(cx);
+              const pw = Math.max(1, Math.round(cx2) - px);
+              const isBlack = (col + checkerRow) % 2 === 0;
+              ctx.fillStyle = CHECKER_COLORS[isBlack ? 0 : 1];
+              ctx.fillRect(px, y, pw, 1);
+            }
+          } else {
+            // Road surface
+            ctx.fillStyle = roadColor;
+            ctx.fillRect(midLeft, y, midRight - midLeft, 1);
 
-          // Centre-line dash: drawn only on even-index segments to create gaps.
-          if (seg === 0 && midRight - midLeft > 2) {
-            const centerX = Math.round((midLeft + midRight) / 2);
-            const dashHalf = Math.max(1, Math.round(scale * 3));
-            const dl = Math.max(midLeft, centerX - dashHalf);
-            const dr = Math.min(midRight, centerX + dashHalf);
-            if (dr > dl) {
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(dl, y, dr - dl, 1);
+            // Centre-line dash: drawn only on even-index segments to create gaps.
+            if (seg === 0 && midRight - midLeft > 2) {
+              const centerX = Math.round((midLeft + midRight) / 2);
+              const dashHalf = Math.max(1, Math.round(scale * 3));
+              const dl = Math.max(midLeft, centerX - dashHalf);
+              const dr = Math.min(midRight, centerX + dashHalf);
+              if (dr > dl) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(dl, y, dr - dl, 1);
+              }
             }
           }
         }

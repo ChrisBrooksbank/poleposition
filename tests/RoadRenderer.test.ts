@@ -9,8 +9,12 @@ import {
   GRASS_COLORS,
   ROAD_COLORS,
   RUMBLE_COLORS,
+  CHECKER_COLORS,
+  CHECKER_ZONE_LENGTH,
+  CHECKER_COLS,
   segmentIndex,
   computeCurveOffsets,
+  isInCheckerZone,
 } from '../src/renderer/RoadRenderer';
 
 const WIDTH = 256;
@@ -296,5 +300,70 @@ describe('computeCurveOffsets', () => {
     for (let y = horizonY + 1; y < HEIGHT; y++) {
       expect(offsets2[y]).toBeCloseTo(offsets1[y] * 2, 5);
     }
+  });
+});
+
+describe('checker constants', () => {
+  it('CHECKER_COLORS contains exactly two distinct colour strings', () => {
+    expect(CHECKER_COLORS).toHaveLength(2);
+    expect(typeof CHECKER_COLORS[0]).toBe('string');
+    expect(typeof CHECKER_COLORS[1]).toBe('string');
+    expect(CHECKER_COLORS[0]).not.toBe(CHECKER_COLORS[1]);
+  });
+
+  it('CHECKER_ZONE_LENGTH is a positive multiple of SEGMENT_LENGTH', () => {
+    expect(CHECKER_ZONE_LENGTH).toBeGreaterThan(0);
+    expect(CHECKER_ZONE_LENGTH % SEGMENT_LENGTH).toBeCloseTo(0, 10);
+  });
+
+  it('CHECKER_COLS is a positive even integer (so columns pair neatly)', () => {
+    expect(CHECKER_COLS).toBeGreaterThan(0);
+    expect(Number.isInteger(CHECKER_COLS)).toBe(true);
+    expect(CHECKER_COLS % 2).toBe(0);
+  });
+});
+
+describe('isInCheckerZone', () => {
+  const LAP = 10; // arbitrary lap length for tests
+
+  it('returns false when lapLength <= 0', () => {
+    expect(isInCheckerZone(0, 0)).toBe(false);
+    expect(isInCheckerZone(0, -1)).toBe(false);
+  });
+
+  it('returns true for worldZ = 0 (start of lap)', () => {
+    expect(isInCheckerZone(0, LAP)).toBe(true);
+  });
+
+  it('returns true for worldZ just inside the zone', () => {
+    expect(isInCheckerZone(CHECKER_ZONE_LENGTH - 0.001, LAP)).toBe(true);
+  });
+
+  it('returns false for worldZ at the zone boundary', () => {
+    expect(isInCheckerZone(CHECKER_ZONE_LENGTH, LAP)).toBe(false);
+  });
+
+  it('returns false for worldZ well past the zone', () => {
+    expect(isInCheckerZone(CHECKER_ZONE_LENGTH + 0.1, LAP)).toBe(false);
+  });
+
+  it('returns true for worldZ at the start of a subsequent lap', () => {
+    // worldZ = LAP (exactly one lap ahead) should wrap to 0 and be in zone.
+    expect(isInCheckerZone(LAP, LAP)).toBe(true);
+  });
+
+  it('returns true for worldZ just before the lap boundary (wraps correctly)', () => {
+    // LAP * 2 is also a lap boundary
+    expect(isInCheckerZone(LAP * 2 + CHECKER_ZONE_LENGTH * 0.5, LAP)).toBe(true);
+  });
+
+  it('returns false for negative worldZ outside the zone', () => {
+    // -CHECKER_ZONE_LENGTH wraps to LAP - CHECKER_ZONE_LENGTH, which is outside
+    expect(isInCheckerZone(-CHECKER_ZONE_LENGTH, LAP)).toBe(false);
+  });
+
+  it('returns true for small negative worldZ (wraps near lap end → within zone on next lap)', () => {
+    // worldZ = -0.001 wraps to LAP - 0.001, which is NOT in the zone [0, CHECKER_ZONE_LENGTH)
+    expect(isInCheckerZone(-0.001, LAP)).toBe(false);
   });
 });
