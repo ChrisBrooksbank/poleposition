@@ -68,7 +68,7 @@
 
 - [x] Implement DIP switch settings panel: qualifying time, practice/extended rank, lap count, speed setting, units (KPH/MPH) — persisted in localStorage (spec: game-flow.md)
 - [x] Implement puddle sprites on track + brief spin-out effect on player contact (spec: road-rendering.md, driving-mechanics.md)
-- [ ] Hills stretch goal: Y-offset per segment to create crests that obscure the road ahead (spec: road-rendering.md)
+- [x] Hills stretch goal: Y-offset per segment to create crests that obscure the road ahead (spec: road-rendering.md)
 - [ ] Gamepad API support: map analog stick to steering, triggers to throttle/brake, button to gear shift (spec: driving-mechanics.md)
 - [ ] Stereo spatial audio stretch goal: AI car engine pan based on lateral position relative to player (spec: audio-system.md)
 
