@@ -10,7 +10,7 @@
 
 ### Phase 1: Project Scaffolding (prerequisite for everything)
 
-- [ ] Scaffold Vite + TypeScript project: package.json, tsconfig.json, vite.config.ts with entry point index.html and src/main.ts (spec: all)
+- [x] Scaffold Vite + TypeScript project: package.json, tsconfig.json, vite.config.ts with entry point index.html and src/main.ts (spec: all)
 - [ ] Configure Vitest with npm test / npm run test:run scripts and a sample passing test (spec: all)
 - [ ] Configure ESLint + Prettier + npm run check (typecheck + lint + test) script (spec: all)
 - [ ] Set up main game canvas: 256x224 logical resolution scaled to fill the browser window, 60 FPS game loop with delta time (spec: road-rendering.md)
