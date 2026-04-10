@@ -23,7 +23,7 @@
 - [x] Define Fuji Speedway track data: segment array encoding curve values for main straight, sharp right, quick left, medium right, left hairpin, long gradual right — continuous loop ~4.36 km (spec: road-rendering.md)
 - [x] Add start/finish checkered pattern: render checker across road width at lap boundary segment (spec: road-rendering.md)
 - [x] Add background layer: sky gradient, Mt. Fuji silhouette, mountain range, parallax horizontal scroll synced to road curve dx (spec: road-rendering.md)
-- [ ] Add roadside billboard sprites: distance-scaled sprites at defined track positions for 7 fictional brands (TURBO, ZOOM COLA, OPTIC, VICTOR, VELOCE, FUEL+, SPARK) (spec: road-rendering.md)
+- [x] Add roadside billboard sprites: distance-scaled sprites at defined track positions for 7 fictional brands (TURBO, ZOOM COLA, OPTIC, VICTOR, VELOCE, FUEL+, SPARK) (spec: road-rendering.md)
 
 ### Phase 3: Player Car & Input (driving feel)
 

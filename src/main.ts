@@ -9,6 +9,7 @@ import {
   CAMERA_DEPTH,
 } from './renderer/RoadRenderer';
 import { BackgroundRenderer } from './renderer/BackgroundRenderer';
+import { BillboardRenderer } from './renderer/BillboardRenderer';
 import { getTrackCurve } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
@@ -40,6 +41,7 @@ export function setupCanvas(): CanvasRenderingContext2D {
 
 const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+const billboardRenderer = new BillboardRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
 /** Player's world-Z position in metres. Advances each frame once driving is implemented. */
 const playerZ = 0;
@@ -66,6 +68,9 @@ function render(ctx: CanvasRenderingContext2D): void {
 
   // Render pseudo-3D road (scanline perspective projection)
   roadRenderer.render(ctx, playerZ, getTrackCurve);
+
+  // Render distance-scaled billboard sprites on road edges
+  billboardRenderer.render(ctx, playerZ, getTrackCurve);
 }
 
 function main(): void {
