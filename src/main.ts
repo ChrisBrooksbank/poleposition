@@ -24,6 +24,7 @@ import { AICarRenderer } from './renderer/AICarRenderer';
 import { GameStateMachine, GameState } from './state/GameStateMachine';
 import { AttractMode, AttractPhase } from './state/AttractMode';
 import { QualifyingState, QualifyingOutcome } from './state/QualifyingState';
+import { GridDisplayState } from './state/GridDisplayState';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
@@ -88,12 +89,8 @@ const attractMode = new AttractMode();
 /** Qualifying lap state — timer, lap detection, grid position. */
 const qualifyingState = new QualifyingState();
 
-/**
- * Grid position (1–8) earned during qualifying.
- * Set when the player qualifies; read by GRID_DISPLAY render.
- * 0 = not yet determined.
- */
-let qualifyingGridPosition = 0;
+/** Grid position display state — timer and earned position for the post-qualifying screen. */
+const gridDisplayState = new GridDisplayState();
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -323,14 +320,13 @@ stateMachine.register(GameState.QUALIFYING, {
     isOffRoad = false;
     isColliding = false;
     qualifyingState.reset();
-    qualifyingGridPosition = 0;
   },
   update: (dt) => {
     updateGameplay(dt);
     qualifyingState.update(dt, playerZ, TRACK_LENGTH);
 
     if (qualifyingState.outcome === QualifyingOutcome.QUALIFIED) {
-      qualifyingGridPosition = qualifyingState.gridPosition;
+      gridDisplayState.reset(qualifyingState.gridPosition);
       stateMachine.transition(GameState.GRID_DISPLAY);
     } else if (qualifyingState.outcome === QualifyingOutcome.FAILED) {
       stateMachine.transition(GameState.GAME_OVER);
@@ -362,30 +358,39 @@ stateMachine.register(GameState.QUALIFYING, {
   },
 });
 
-// GRID_DISPLAY — show earned starting grid position
+// GRID_DISPLAY — show earned starting grid position after qualifying
 stateMachine.register(GameState.GRID_DISPLAY, {
   onEnter: () => {
-    stateElapsed = 0;
+    // gridDisplayState was already reset in QUALIFYING's update when QUALIFIED
+    // (reset call sets the earned position); nothing extra needed here.
   },
   update: (dt) => {
-    stateElapsed += dt;
-    if (stateElapsed > 3000) {
+    gridDisplayState.update(dt);
+    if (gridDisplayState.isDone) {
       stateMachine.transition(GameState.GRAND_PRIX);
     }
   },
   render: (ctx) => {
+    renderRoadBackdrop(ctx);
     ctx.save();
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
     ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '8px monospace';
+
+    // Title banner
+    ctx.fillStyle = '#ffdd00';
+    ctx.font = 'bold 10px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('GRID POSITION', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 8);
+    ctx.fillText('GRID POSITION', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 16);
+
+    // Position text
     const posText =
-      qualifyingGridPosition > 0
-        ? `YOU ARE IN ${ordinal(qualifyingGridPosition)}`
+      gridDisplayState.gridPosition > 0
+        ? `YOU ARE IN ${ordinal(gridDisplayState.gridPosition)}`
         : 'DID NOT QUALIFY';
-    ctx.fillText(posText, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 8);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.fillText(posText, LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 + 4);
+
     ctx.restore();
   },
 });
