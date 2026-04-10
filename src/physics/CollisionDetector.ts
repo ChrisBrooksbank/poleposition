@@ -11,6 +11,7 @@
  */
 
 import { BILLBOARDS } from '../track/billboards';
+import { PUDDLES, PUDDLE_WORLD_HALF_WIDTH, PUDDLE_WORLD_HALF_DEPTH } from '../track/puddles';
 import { TRACK_LENGTH } from '../track/fujiSpeedway';
 
 // ---------------------------------------------------------------------------
@@ -81,6 +82,33 @@ export class CollisionDetector {
 
       if (Math.abs(relZ) > combinedZHalf) continue;
       if (Math.abs(playerX - bb.lateralOffset) > combinedXHalf) continue;
+
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if the player is overlapping any puddle on the road surface.
+   *
+   * Uses AABB in road space.  Puddles do not cause an explosion — they trigger
+   * a spin-out effect instead.  The same lap-wrap logic as checkBillboards is
+   * applied so puddles appear every lap.
+   *
+   * @param playerZ  Player's absolute world-Z in metres.
+   * @param playerX  Player's lateral position in road-space pixels.
+   * @returns true if the player is overlapping at least one puddle.
+   */
+  checkPuddles(playerZ: number, playerX: number): boolean {
+    const combinedZHalf = PUDDLE_WORLD_HALF_DEPTH + PLAYER_CAR_Z_HALF;
+    const combinedXHalf = PUDDLE_WORLD_HALF_WIDTH + PLAYER_CAR_X_HALF;
+
+    for (const puddle of PUDDLES) {
+      const rawRel = (((puddle.trackZ - playerZ) % TRACK_LENGTH) + TRACK_LENGTH) % TRACK_LENGTH;
+      const relZ = rawRel > TRACK_LENGTH / 2 ? rawRel - TRACK_LENGTH : rawRel;
+
+      if (Math.abs(relZ) > combinedZHalf) continue;
+      if (Math.abs(playerX - puddle.lateralOffset) > combinedXHalf) continue;
 
       return true;
     }

@@ -10,6 +10,7 @@ import {
   type AICar,
 } from '../src/physics/CollisionDetector';
 import { BILLBOARDS } from '../src/track/billboards';
+import { PUDDLES, PUDDLE_WORLD_HALF_WIDTH, PUDDLE_WORLD_HALF_DEPTH } from '../src/track/puddles';
 import { TRACK_LENGTH } from '../src/track/fujiSpeedway';
 
 describe('CollisionDetector', () => {
@@ -152,6 +153,56 @@ describe('CollisionDetector', () => {
   });
 
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Puddle collision
+  // -------------------------------------------------------------------------
+
+  describe('checkPuddles', () => {
+    const puddle = PUDDLES[0];
+
+    const combinedZHalf = PUDDLE_WORLD_HALF_DEPTH + PLAYER_CAR_Z_HALF;
+    const combinedXHalf = PUDDLE_WORLD_HALF_WIDTH + PLAYER_CAR_X_HALF;
+
+    it('detects overlap when player is directly on a puddle', () => {
+      expect(detector.checkPuddles(puddle.trackZ, puddle.lateralOffset)).toBe(true);
+    });
+
+    it('detects overlap at the Z boundary (just inside)', () => {
+      const playerZ = puddle.trackZ - (combinedZHalf - 0.1);
+      expect(detector.checkPuddles(playerZ, puddle.lateralOffset)).toBe(true);
+    });
+
+    it('no overlap just outside the Z boundary', () => {
+      const playerZ = puddle.trackZ - (combinedZHalf + 0.1);
+      expect(detector.checkPuddles(playerZ, puddle.lateralOffset)).toBe(false);
+    });
+
+    it('detects overlap at the X boundary (just inside)', () => {
+      const playerX = puddle.lateralOffset - (combinedXHalf - 1);
+      expect(detector.checkPuddles(puddle.trackZ, playerX)).toBe(true);
+    });
+
+    it('no overlap just outside the X boundary', () => {
+      const playerX = puddle.lateralOffset - (combinedXHalf + 1);
+      expect(detector.checkPuddles(puddle.trackZ, playerX)).toBe(false);
+    });
+
+    it('no overlap when player is far from all puddles', () => {
+      // Position player where no puddles exist
+      expect(detector.checkPuddles(50, 0)).toBe(false);
+    });
+
+    it('handles lap wrap-around correctly', () => {
+      const playerZ = TRACK_LENGTH + puddle.trackZ - (combinedZHalf - 1);
+      expect(detector.checkPuddles(playerZ, puddle.lateralOffset)).toBe(true);
+    });
+
+    it('detects overlap with puddles other than the first', () => {
+      const lastPuddle = PUDDLES[PUDDLES.length - 1];
+      expect(detector.checkPuddles(lastPuddle.trackZ, lastPuddle.lateralOffset)).toBe(true);
+    });
+  });
+
   // Constants sanity checks
   // -------------------------------------------------------------------------
 

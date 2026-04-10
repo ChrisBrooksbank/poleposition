@@ -70,6 +70,16 @@ export class SteeringPhysics {
     this._playerX += steerDelta + driftDelta;
   }
 
+  /**
+   * Apply an immediate lateral position nudge (used for puddle spin-out).
+   * The value is in screen-pixels and is added directly to the car position.
+   *
+   * @param dx Lateral displacement in road-space pixels (+ve = right).
+   */
+  nudge(dx: number): void {
+    this._playerX += dx;
+  }
+
   /** Reset lateral position to road centre (used on respawn). */
   reset(): void {
     this._playerX = 0;

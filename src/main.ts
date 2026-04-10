@@ -40,6 +40,8 @@ import { DiscreteSFX } from './audio/DiscreteSFX';
 import { VoiceAnnouncements } from './audio/VoiceAnnouncements';
 import { DIPSwitchSettings } from './settings/DIPSwitchSettings';
 import { DIPSwitchPanel } from './settings/DIPSwitchPanel';
+import { PuddleSpinState } from './state/PuddleSpinState';
+import { PuddleRenderer } from './renderer/PuddleRenderer';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -71,6 +73,7 @@ export function setupCanvas(): CanvasRenderingContext2D {
 const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const billboardRenderer = new BillboardRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+const puddleRenderer = new PuddleRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const playerCarRenderer = new PlayerCarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const explosionRenderer = new ExplosionRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const aiCarRenderer = new AICarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -84,6 +87,7 @@ let physics = new PlayerPhysics(dipSettings.topSpeedMph);
 const steering = new SteeringPhysics();
 const collisionDetector = new CollisionDetector();
 let explosionState = new ExplosionState();
+const puddleSpinState = new PuddleSpinState();
 const aiCarSystem = new AICarSystem();
 
 /** Player's world-Z position in metres. Advances each frame based on speed. */
@@ -157,6 +161,7 @@ function updateGameplay(dt: number): void {
     if (shouldRespawn) {
       physics.reset();
       steering.reset();
+      puddleSpinState.reset();
     }
     isOffRoad = false;
     isColliding = false;
@@ -174,6 +179,21 @@ function updateGameplay(dt: number): void {
   isOffRoad = Math.abs(steering.playerX) > ROAD_HALF_WIDTH;
   if (isOffRoad) {
     physics.applyOffRoadPenalty(dt);
+  }
+
+  // Puddle detection: triggers spin-out (not explosion) on contact
+  puddleSpinState.update(dt);
+  if (collisionDetector.checkPuddles(playerZ, steering.playerX)) {
+    const justTriggered = puddleSpinState.trigger();
+    if (justTriggered) {
+      discreteSFX.triggerPuddleHit();
+    }
+  }
+
+  // Apply spin-out lateral nudge when active
+  const spinNudge = puddleSpinState.getLateralNudge(dt);
+  if (spinNudge !== 0) {
+    steering.nudge(spinNudge);
   }
 
   // Collision detection: player vs billboards and AI cars
@@ -228,6 +248,9 @@ function renderGameplay(ctx: CanvasRenderingContext2D): void {
 
   // Render pseudo-3D road (scanline perspective projection)
   roadRenderer.render(ctx, playerZ, getTrackCurve, 0, playerX);
+
+  // Render puddle sprites on the road surface (before cars/billboards so cars overlay)
+  puddleRenderer.render(ctx, playerZ, getTrackCurve, playerX);
 
   // Render distance-scaled billboard sprites on road edges
   billboardRenderer.render(ctx, playerZ, getTrackCurve, playerX);
@@ -399,6 +422,7 @@ stateMachine.register(GameState.QUALIFYING, {
     physics = new PlayerPhysics(dipSettings.topSpeedMph);
     steering.reset();
     explosionState = new ExplosionState();
+    puddleSpinState.reset();
     aiCarSystem.reset();
     aiCars = aiCarSystem.getCars();
     isOffRoad = false;
@@ -499,6 +523,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
     physics = new PlayerPhysics(dipSettings.topSpeedMph);
     steering.reset();
     explosionState = new ExplosionState();
+    puddleSpinState.reset();
     aiCarSystem.reset();
     aiCars = aiCarSystem.getCars();
     isOffRoad = false;

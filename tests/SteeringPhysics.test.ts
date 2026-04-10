@@ -126,6 +126,32 @@ describe('SteeringPhysics', () => {
     });
   });
 
+  describe('nudge()', () => {
+    it('shifts playerX by a positive delta', () => {
+      steering.nudge(20);
+      expect(steering.playerX).toBe(20);
+    });
+
+    it('shifts playerX by a negative delta', () => {
+      steering.nudge(-15);
+      expect(steering.playerX).toBe(-15);
+    });
+
+    it('nudges are additive with existing position', () => {
+      steering.update(1000, false, true, 225, 0); // move right
+      const before = steering.playerX;
+      steering.nudge(5);
+      expect(steering.playerX).toBeCloseTo(before + 5, 5);
+    });
+
+    it('nudge(0) does not change position', () => {
+      steering.update(100, false, true, 225, 0);
+      const before = steering.playerX;
+      steering.nudge(0);
+      expect(steering.playerX).toBe(before);
+    });
+  });
+
   describe('constants', () => {
     it('MAX_STEER_RATE is 220 px/s', () => {
       expect(SteeringPhysics.MAX_STEER_RATE).toBe(220);
