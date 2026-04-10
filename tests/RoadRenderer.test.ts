@@ -4,6 +4,12 @@ import {
   HORIZON_Y,
   CAMERA_DEPTH,
   ROAD_HALF_WIDTH,
+  SEGMENT_LENGTH,
+  RUMBLE_WIDTH,
+  GRASS_COLORS,
+  ROAD_COLORS,
+  RUMBLE_COLORS,
+  segmentIndex,
 } from '../src/renderer/RoadRenderer';
 
 const WIDTH = 256;
@@ -142,5 +148,75 @@ describe('RoadRenderer', () => {
       const w = strip.roadRight - strip.roadLeft;
       expect(w).toBeCloseTo(2 * 50 * strip.scale, 6);
     });
+  });
+});
+
+describe('surface detail constants', () => {
+  it('SEGMENT_LENGTH is a positive number', () => {
+    expect(SEGMENT_LENGTH).toBeGreaterThan(0);
+    expect(typeof SEGMENT_LENGTH).toBe('number');
+  });
+
+  it('RUMBLE_WIDTH is a positive integer', () => {
+    expect(RUMBLE_WIDTH).toBeGreaterThan(0);
+    expect(Number.isInteger(RUMBLE_WIDTH)).toBe(true);
+  });
+
+  it('GRASS_COLORS contains exactly two distinct colour strings', () => {
+    expect(GRASS_COLORS).toHaveLength(2);
+    expect(typeof GRASS_COLORS[0]).toBe('string');
+    expect(typeof GRASS_COLORS[1]).toBe('string');
+    expect(GRASS_COLORS[0]).not.toBe(GRASS_COLORS[1]);
+  });
+
+  it('ROAD_COLORS contains exactly two distinct colour strings', () => {
+    expect(ROAD_COLORS).toHaveLength(2);
+    expect(typeof ROAD_COLORS[0]).toBe('string');
+    expect(typeof ROAD_COLORS[1]).toBe('string');
+    expect(ROAD_COLORS[0]).not.toBe(ROAD_COLORS[1]);
+  });
+
+  it('RUMBLE_COLORS contains exactly two distinct colour strings', () => {
+    expect(RUMBLE_COLORS).toHaveLength(2);
+    expect(typeof RUMBLE_COLORS[0]).toBe('string');
+    expect(typeof RUMBLE_COLORS[1]).toBe('string');
+    expect(RUMBLE_COLORS[0]).not.toBe(RUMBLE_COLORS[1]);
+  });
+});
+
+describe('segmentIndex', () => {
+  it('returns 0 or 1', () => {
+    const results = [0, 0.1, 0.5, 1.0, 1.5, 2.0, 3.7].map((z) => segmentIndex(z));
+    for (const r of results) {
+      expect(r === 0 || r === 1).toBe(true);
+    }
+  });
+
+  it('returns 0 for Infinity (horizon)', () => {
+    expect(segmentIndex(Infinity)).toBe(0);
+  });
+
+  it('returns 0 for NaN', () => {
+    expect(segmentIndex(NaN)).toBe(0);
+  });
+
+  it('alternates at segment boundaries', () => {
+    const seg0 = segmentIndex(0);
+    const seg1 = segmentIndex(SEGMENT_LENGTH * 1.5);
+    const seg2 = segmentIndex(SEGMENT_LENGTH * 2.5);
+    expect(seg1).not.toBe(seg0);
+    expect(seg2).toBe(seg0);
+  });
+
+  it('is consistent: same worldZ always gives same result', () => {
+    expect(segmentIndex(0.7)).toBe(segmentIndex(0.7));
+    expect(segmentIndex(1.4)).toBe(segmentIndex(1.4));
+  });
+
+  it('accepts a custom segmentLength', () => {
+    // With segmentLength=1.0, worldZ=0.5 → index 0; worldZ=1.5 → index 1
+    expect(segmentIndex(0.5, 1.0)).toBe(0);
+    expect(segmentIndex(1.5, 1.0)).toBe(1);
+    expect(segmentIndex(2.5, 1.0)).toBe(0);
   });
 });
