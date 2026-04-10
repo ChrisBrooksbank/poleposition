@@ -275,12 +275,17 @@ export class RoadRenderer {
    * @param lapLength Total lap length in world-z units.  When > 0 the start/finish
    *                  checkered pattern is drawn at the lap boundary (worldZ = 0 mod
    *                  lapLength).  Defaults to 0 (no checker rendered).
+   * @param playerX   Player's lateral position in screen-pixels at perspective
+   *                  scale=1.  0 = road centre; positive = right of centre.
+   *                  Shifts the rendered road left/right so the car's position
+   *                  is reflected visually.  Defaults to 0.
    */
   render(
     ctx: CanvasRenderingContext2D,
     playerZ = 0,
     getCurve?: CurveFunction,
-    lapLength = 0
+    lapLength = 0,
+    playerX = 0
   ): void {
     const maxDepth = this.height - this.horizonY;
 
@@ -291,7 +296,8 @@ export class RoadRenderer {
         : new Float32Array(this.height);
 
     for (let y = this.horizonY + 1; y < this.height; y++) {
-      const { roadLeft, roadRight, scale } = this.projectScanline(y, xOffsets[y]);
+      // Subtract playerX so when the car moves right the road shifts left.
+      const { roadLeft, roadRight, scale } = this.projectScanline(y, xOffsets[y] - playerX);
 
       // World-space z for this scanline.
       const depth = y - this.horizonY;

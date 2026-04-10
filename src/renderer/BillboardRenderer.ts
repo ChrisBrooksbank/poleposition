@@ -134,8 +134,17 @@ export class BillboardRenderer {
    * @param ctx       Canvas 2D rendering context.
    * @param playerZ   Player's absolute world-Z position in metres.
    * @param getCurve  Curve-strength function (same as passed to RoadRenderer).
+   * @param playerX   Player's lateral position in screen-pixels at perspective
+   *                  scale=1 (same coordinate system as RoadRenderer).
+   *                  Shifts billboards so they stay correctly positioned
+   *                  relative to the road when the car is off-centre.
    */
-  render(ctx: CanvasRenderingContext2D, playerZ: number, getCurve?: CurveFunction): void {
+  render(
+    ctx: CanvasRenderingContext2D,
+    playerZ: number,
+    getCurve?: CurveFunction,
+    playerX = 0
+  ): void {
     // Pre-compute per-scanline curve offsets (needed to position billboards
     // on the correct horizontal position even on curved sections).
     const xOffsets =
@@ -146,7 +155,7 @@ export class BillboardRenderer {
     const projected: ProjectedBillboard[] = [];
 
     for (const bb of BILLBOARDS) {
-      this._projectOne(bb, playerZ, xOffsets, projected);
+      this._projectOne(bb, playerZ, xOffsets, projected, playerX);
     }
 
     // Sort farthest-first so nearer billboards render on top.
@@ -162,7 +171,8 @@ export class BillboardRenderer {
     bb: Billboard,
     playerZ: number,
     xOffsets: Float32Array,
-    out: ProjectedBillboard[]
+    out: ProjectedBillboard[],
+    playerX = 0
   ): void {
     // Compute relative Z, wrapping the lap so the billboard appears every lap.
     // We look one lap ahead to handle the transition around the lap boundary.
@@ -180,8 +190,9 @@ export class BillboardRenderer {
     const baseY = Math.round(this.horizonY + baseDepth);
 
     // Look up the curve offset at the scanline where the billboard base sits.
+    // Subtract playerX so billboards shift with the road when the car moves laterally.
     const clampedY = Math.max(this.horizonY + 1, Math.min(this.height - 1, baseY));
-    const curveOffset = xOffsets[clampedY] ?? 0;
+    const curveOffset = (xOffsets[clampedY] ?? 0) - playerX;
 
     const p = this.projectBillboard(relZ, bb.lateralOffset, curveOffset, bb.design);
     if (p) out.push(p);

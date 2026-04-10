@@ -11,6 +11,9 @@ import {
 import { BackgroundRenderer } from './renderer/BackgroundRenderer';
 import { BillboardRenderer } from './renderer/BillboardRenderer';
 import { getTrackCurve } from './track/fujiSpeedway';
+import { InputHandler } from './input/InputHandler';
+import { PlayerPhysics } from './physics/PlayerPhysics';
+import { SteeringPhysics, MPH_TO_MS } from './physics/SteeringPhysics';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -43,14 +46,28 @@ const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const billboardRenderer = new BillboardRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
-/** Player's world-Z position in metres. Advances each frame once driving is implemented. */
-const playerZ = 0;
+const input = new InputHandler();
+const physics = new PlayerPhysics();
+const steering = new SteeringPhysics();
 
-function update(_dt: number): void {
-  // dt is in milliseconds; game logic will use this in later tasks
+/** Player's world-Z position in metres. Advances each frame based on speed. */
+let playerZ = 0;
+
+function update(dt: number): void {
+  // Update speed model
+  physics.update(dt, input.throttle, input.brake, input.gear);
+
+  // Update lateral position based on steering input and road curve
+  const curvePower = getTrackCurve(playerZ);
+  steering.update(dt, input.left, input.right, physics.speed, curvePower, physics.topSpeedHighGear);
+
+  // Advance position along the track (speed in MPH → metres per second)
+  playerZ += physics.speed * MPH_TO_MS * (dt / 1000);
 }
 
 function render(ctx: CanvasRenderingContext2D): void {
+  const playerX = steering.playerX;
+
   // Compute per-scanline curve offsets to determine vanishing-point sway.
   // The offset at horizonY + 1 is the maximum accumulated offset and drives
   // background parallax (farther layers shift proportionally less).
@@ -67,10 +84,10 @@ function render(ctx: CanvasRenderingContext2D): void {
   bgRenderer.render(ctx, parallaxX);
 
   // Render pseudo-3D road (scanline perspective projection)
-  roadRenderer.render(ctx, playerZ, getTrackCurve);
+  roadRenderer.render(ctx, playerZ, getTrackCurve, 0, playerX);
 
   // Render distance-scaled billboard sprites on road edges
-  billboardRenderer.render(ctx, playerZ, getTrackCurve);
+  billboardRenderer.render(ctx, playerZ, getTrackCurve, playerX);
 }
 
 function main(): void {
