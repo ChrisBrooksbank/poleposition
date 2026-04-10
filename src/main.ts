@@ -2,6 +2,7 @@
 // Logical resolution: 256x224 pixels (scaled to fill browser window)
 
 import { GameLoop } from './GameLoop';
+import { RoadRenderer } from './renderer/RoadRenderer';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -30,20 +31,19 @@ export function setupCanvas(): CanvasRenderingContext2D {
   return ctx;
 }
 
+const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
 function update(_dt: number): void {
   // dt is in milliseconds; game logic will use this in later tasks
 }
 
 function render(ctx: CanvasRenderingContext2D): void {
-  // Clear screen
-  ctx.fillStyle = '#000';
+  // Clear screen with sky colour (placeholder until background task)
+  ctx.fillStyle = '#5ba3e0';
   ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
-  // Placeholder: draw "POLE POSITION" text
-  ctx.fillStyle = '#fff';
-  ctx.font = '8px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText('POLE POSITION', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+  // Render pseudo-3D road (scanline perspective projection)
+  roadRenderer.render(ctx);
 }
 
 function main(): void {
