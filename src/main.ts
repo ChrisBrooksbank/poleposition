@@ -30,6 +30,8 @@ import { RaceCompleteState } from './state/RaceCompleteState';
 import { ScoreTracker } from './state/ScoreTracker';
 import { HUDRenderer } from './renderer/HUDRenderer';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
+import { HighScoreManager } from './state/HighScoreManager';
+import { NameEntryState, NAME_ENTRY_LETTERS } from './state/NameEntryState';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -107,6 +109,15 @@ const scoreTracker = new ScoreTracker();
 
 /** HUD renderer — draws speed, timer, score, lap, and race position overlays. */
 const hudRenderer = new HUDRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+/** High score manager — persistent localStorage table, ranking tiers. */
+const highScoreManager = new HighScoreManager();
+
+/** Name entry state — manages 3-initial keyboard input. */
+const nameEntryState = new NameEntryState();
+
+/** 1-based rank awarded to the player at the end of the last race. */
+let playerRank = 0;
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -569,22 +580,112 @@ stateMachine.register(GameState.GAME_OVER, {
 // NAME_ENTRY — player enters 3-character initials for high score
 stateMachine.register(GameState.NAME_ENTRY, {
   onEnter: () => {
+    nameEntryState.reset();
     stateElapsed = 0;
   },
   update: (dt) => {
     stateElapsed += dt;
-    if (stateElapsed > 5000) {
-      stateMachine.transition(GameState.ATTRACT);
+
+    if (!nameEntryState.isDone) {
+      nameEntryState.update(
+        dt,
+        input.left,
+        input.right,
+        input.isKeyDown('Enter') || input.isKeyDown('Space')
+      );
+
+      if (nameEntryState.isDone) {
+        playerRank = highScoreManager.addEntry(nameEntryState.initials, scoreTracker.score);
+      }
+    } else {
+      // After name is submitted, show the table for a moment before returning
+      if (stateElapsed > 6000) {
+        stateMachine.transition(GameState.ATTRACT);
+      }
     }
   },
   render: (ctx) => {
     ctx.save();
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('ENTER YOUR NAME', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+
+    if (!nameEntryState.isDone) {
+      // ── Name-entry input screen ─────────────────────────────────────────
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('ENTER YOUR NAME', LOGICAL_WIDTH / 2, 28);
+
+      // Score
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = '7px monospace';
+      ctx.fillText(`SCORE  ${String(scoreTracker.score).padStart(6, '0')}`, LOGICAL_WIDTH / 2, 44);
+
+      // Letter slots — draw each of the 3 initials boxes
+      const slotSpacing = 18;
+      const slotsStartX = LOGICAL_WIDTH / 2 - slotSpacing;
+      const slotsY = 80;
+
+      for (let i = 0; i < 3; i++) {
+        const x = slotsStartX + i * slotSpacing;
+        const letter = NAME_ENTRY_LETTERS[nameEntryState.letterIndices[i] ?? 0] ?? 'A';
+        const isActive = nameEntryState.currentSlot === i;
+
+        // Highlight active slot
+        if (isActive) {
+          ctx.fillStyle = '#ffdd00';
+          ctx.fillRect(x - 6, slotsY - 10, 12, 14);
+          ctx.fillStyle = '#000000';
+        } else {
+          ctx.fillStyle = '#ffffff';
+        }
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(letter, x, slotsY);
+      }
+
+      // Navigation hint — blink every 600 ms
+      if (Math.floor(stateElapsed / 600) % 2 === 0) {
+        ctx.fillStyle = '#888888';
+        ctx.font = '6px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('< > TO SELECT  ENTER TO CONFIRM', LOGICAL_WIDTH / 2, 102);
+      }
+    } else {
+      // ── High score table ────────────────────────────────────────────────
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('HIGH SCORES', LOGICAL_WIDTH / 2, 16);
+
+      const entries = highScoreManager.entries;
+      const lineH = 12;
+      const tableY = 28;
+
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        if (!entry) continue;
+        const rank = i + 1;
+        const isPlayer = rank === playerRank && entry.initials === nameEntryState.initials;
+
+        ctx.fillStyle = isPlayer ? '#ffdd00' : rank <= 3 ? '#ffffff' : '#aaaaaa';
+        ctx.font = `${isPlayer ? 'bold ' : ''}7px monospace`;
+        ctx.textAlign = 'left';
+        ctx.fillText(
+          `${String(rank).padStart(2, ' ')}  ${entry.initials}  ${String(entry.score).padStart(6, '0')}`,
+          24,
+          tableY + i * lineH
+        );
+      }
+
+      if (entries.length === 0) {
+        ctx.fillStyle = '#aaaaaa';
+        ctx.font = '7px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('NO SCORES YET', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+      }
+    }
+
     ctx.restore();
   },
 });
