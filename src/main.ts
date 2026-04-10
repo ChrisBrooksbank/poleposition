@@ -32,6 +32,8 @@ import { HUDRenderer } from './renderer/HUDRenderer';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
 import { HighScoreManager } from './state/HighScoreManager';
 import { NameEntryState, NAME_ENTRY_LETTERS } from './state/NameEntryState';
+import { AudioSystem } from './audio/AudioSystem';
+import { EngineSound } from './audio/EngineSound';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -119,6 +121,11 @@ const nameEntryState = new NameEntryState();
 /** 1-based rank awarded to the player at the end of the last race. */
 let playerRank = 0;
 
+/** Audio system — initialized on first user interaction. */
+const audioSystem = new AudioSystem();
+/** Engine sound — continuous oscillator tracking car speed during gameplay. */
+const engineSound = new EngineSound(audioSystem);
+
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
 function updateGameplay(dt: number): void {
@@ -172,6 +179,9 @@ function updateGameplay(dt: number): void {
     aiCars.map((c) => c.z),
     TRACK_LENGTH
   );
+
+  // Update engine sound pitch to match current speed
+  engineSound.update(physics.speed);
 }
 
 function renderGameplay(ctx: CanvasRenderingContext2D): void {
@@ -268,6 +278,7 @@ stateMachine.register(GameState.ATTRACT, {
     if (stateElapsed > 300) {
       const startPressed = input.isKeyDown('Enter') || input.isKeyDown('Space') || input.throttle;
       if (startPressed) {
+        audioSystem.resume();
         stateMachine.transition(GameState.COIN_INSERT);
       }
     }
@@ -357,6 +368,7 @@ stateMachine.register(GameState.QUALIFYING, {
     isColliding = false;
     qualifyingState.reset();
     scoreTracker.reset();
+    engineSound.start();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -456,6 +468,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
       aiCars.map((c) => c.z),
       TRACK_LENGTH
     );
+    engineSound.start();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -510,6 +523,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
 stateMachine.register(GameState.RACE_COMPLETE, {
   onEnter: () => {
     // raceCompleteState was already reset in GRAND_PRIX's update when COMPLETE
+    engineSound.stop();
   },
   update: (dt) => {
     raceCompleteState.update(dt);
@@ -558,6 +572,7 @@ stateMachine.register(GameState.RACE_COMPLETE, {
 stateMachine.register(GameState.GAME_OVER, {
   onEnter: () => {
     stateElapsed = 0;
+    engineSound.stop();
   },
   update: (dt) => {
     stateElapsed += dt;
