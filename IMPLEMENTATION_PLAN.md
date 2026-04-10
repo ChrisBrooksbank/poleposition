@@ -62,7 +62,7 @@
 - [x] Implement collision sound: LFSR-style noise burst with ~3s decay envelope (spec: audio-system.md)
 - [x] Implement discrete SFX: coin insert, qualifying fanfare, countdown beeps, qualifying complete (non-pole + pole variants), race complete, time extend, puddle hit, time bonus tick, overtake tick, grass rumble loop (spec: audio-system.md)
 - [x] Implement voice announcements: synthesized or procedurally filtered "Qualifying Start" and "Grand Prix Start" with 4-bit downsampling / low-pass to match Namco retro character (spec: audio-system.md)
-- [ ] Implement chiptune music: wavetable synthesis (≤8 voices), three name entry melodies (1st, 2nd-6th, 7th-100th place) and game over melody, plays only outside gameplay (spec: audio-system.md)
+- [x] Implement chiptune music: wavetable synthesis (≤8 voices), three name entry melodies (1st, 2nd-6th, 7th-100th place) and game over melody, plays only outside gameplay (spec: audio-system.md)
 
 ### Phase 8: Configuration & Polish
 
