@@ -27,6 +27,7 @@ import { QualifyingState, QualifyingOutcome } from './state/QualifyingState';
 import { GridDisplayState } from './state/GridDisplayState';
 import { GrandPrixState, GrandPrixOutcome } from './state/GrandPrixState';
 import { RaceCompleteState } from './state/RaceCompleteState';
+import { ScoreTracker } from './state/ScoreTracker';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
@@ -100,6 +101,9 @@ const grandPrixState = new GrandPrixState();
 /** Race complete state — captures remaining timer and computes time bonus. */
 const raceCompleteState = new RaceCompleteState();
 
+/** Score tracker — accumulates points for distance, overtakes, and bonuses. */
+const scoreTracker = new ScoreTracker();
+
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
 function updateGameplay(dt: number): void {
@@ -143,7 +147,16 @@ function updateGameplay(dt: number): void {
   }
 
   // Advance position along the track (speed in MPH → metres per second)
-  playerZ += physics.speed * MPH_TO_MS * (dt / 1000);
+  const metersAdvanced = physics.speed * MPH_TO_MS * (dt / 1000);
+  playerZ += metersAdvanced;
+
+  // Award distance points and check for AI car overtakes
+  scoreTracker.addDistance(metersAdvanced);
+  scoreTracker.recordOvertakes(
+    playerZ,
+    aiCars.map((c) => c.z),
+    TRACK_LENGTH
+  );
 }
 
 function renderGameplay(ctx: CanvasRenderingContext2D): void {
@@ -328,12 +341,14 @@ stateMachine.register(GameState.QUALIFYING, {
     isOffRoad = false;
     isColliding = false;
     qualifyingState.reset();
+    scoreTracker.reset();
   },
   update: (dt) => {
     updateGameplay(dt);
     qualifyingState.update(dt, playerZ, TRACK_LENGTH);
 
     if (qualifyingState.outcome === QualifyingOutcome.QUALIFIED) {
+      scoreTracker.addQualifyingBonus(qualifyingState.gridPosition);
       gridDisplayState.reset(qualifyingState.gridPosition);
       stateMachine.transition(GameState.GRID_DISPLAY);
     } else if (qualifyingState.outcome === QualifyingOutcome.FAILED) {
@@ -362,6 +377,14 @@ stateMachine.register(GameState.QUALIFYING, {
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'right';
     ctx.fillText(`TIME ${String(secs).padStart(3, ' ')}`, LOGICAL_WIDTH - 4, 12);
+    ctx.restore();
+
+    // Score display
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${String(scoreTracker.score).padStart(6, '0')}`, 4, 12);
     ctx.restore();
   },
 });
@@ -415,6 +438,13 @@ stateMachine.register(GameState.GRAND_PRIX, {
     isOffRoad = false;
     isColliding = false;
     grandPrixState.reset();
+    // Re-initialise overtake tracking without clearing the score accumulated
+    // during qualifying — just reset the per-car baseline.
+    scoreTracker.recordOvertakes(
+      playerZ,
+      aiCars.map((c) => c.z),
+      TRACK_LENGTH
+    );
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -426,6 +456,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
     }
 
     if (grandPrixState.outcome === GrandPrixOutcome.COMPLETE) {
+      scoreTracker.addTimeBonus(grandPrixState.timerMs);
       raceCompleteState.reset(grandPrixState.timerMs);
       stateMachine.transition(GameState.RACE_COMPLETE);
     } else if (grandPrixState.outcome === GrandPrixOutcome.FAILED) {
@@ -462,6 +493,14 @@ stateMachine.register(GameState.GRAND_PRIX, {
     ctx.font = 'bold 8px monospace';
     ctx.textAlign = 'left';
     ctx.fillText(`LAP ${grandPrixState.currentLap}/${grandPrixState.totalLaps}`, 4, 12);
+    ctx.restore();
+
+    // Score display
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${String(scoreTracker.score).padStart(6, '0')}`, 4, 22);
     ctx.restore();
   },
 });
@@ -503,6 +542,11 @@ stateMachine.register(GameState.RACE_COMPLETE, {
       `TIME BONUS  ${String(bonus).padStart(6, ' ')} PTS`,
       LOGICAL_WIDTH / 2,
       LOGICAL_HEIGHT / 2 + 14
+    );
+    ctx.fillText(
+      `SCORE  ${String(scoreTracker.score).padStart(6, '0')}`,
+      LOGICAL_WIDTH / 2,
+      LOGICAL_HEIGHT / 2 + 28
     );
 
     ctx.restore();
