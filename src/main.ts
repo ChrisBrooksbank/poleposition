@@ -16,6 +16,7 @@ import { InputHandler } from './input/InputHandler';
 import { PlayerPhysics } from './physics/PlayerPhysics';
 import { SteeringPhysics, MPH_TO_MS } from './physics/SteeringPhysics';
 import { PlayerCarRenderer } from './renderer/PlayerCarRenderer';
+import { CollisionDetector } from './physics/CollisionDetector';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -52,12 +53,16 @@ const playerCarRenderer = new PlayerCarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const input = new InputHandler();
 const physics = new PlayerPhysics();
 const steering = new SteeringPhysics();
+const collisionDetector = new CollisionDetector();
 
 /** Player's world-Z position in metres. Advances each frame based on speed. */
 let playerZ = 0;
 
 /** Whether the player car is currently off the road surface (on grass). */
 let isOffRoad = false;
+
+/** Whether the player is currently touching a collision object (billboard or AI car). */
+let isColliding = false;
 
 function update(dt: number): void {
   // Update speed model
@@ -72,6 +77,11 @@ function update(dt: number): void {
   if (isOffRoad) {
     physics.applyOffRoadPenalty(dt);
   }
+
+  // Collision detection: player vs billboards and AI cars (empty for now)
+  isColliding =
+    collisionDetector.checkBillboards(playerZ, steering.playerX) ||
+    collisionDetector.checkAICars(playerZ, steering.playerX, []);
 
   // Advance position along the track (speed in MPH → metres per second)
   playerZ += physics.speed * MPH_TO_MS * (dt / 1000);
@@ -106,6 +116,15 @@ function render(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = '#3a6e10';
+    ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y);
+    ctx.restore();
+  }
+
+  // Collision flash: semi-transparent white overlay when touching a billboard or AI car
+  if (isColliding) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y);
     ctx.restore();
   }
