@@ -1,10 +1,12 @@
 // Pole Position - Main Entry Point
 // Logical resolution: 256x224 pixels (scaled to fill browser window)
 
-const LOGICAL_WIDTH = 256;
-const LOGICAL_HEIGHT = 224;
+import { GameLoop } from './GameLoop';
 
-function setupCanvas(): CanvasRenderingContext2D {
+export const LOGICAL_WIDTH = 256;
+export const LOGICAL_HEIGHT = 224;
+
+export function setupCanvas(): CanvasRenderingContext2D {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   canvas.width = LOGICAL_WIDTH;
   canvas.height = LOGICAL_HEIGHT;
@@ -28,7 +30,11 @@ function setupCanvas(): CanvasRenderingContext2D {
   return ctx;
 }
 
-function gameLoop(ctx: CanvasRenderingContext2D): void {
+function update(_dt: number): void {
+  // dt is in milliseconds; game logic will use this in later tasks
+}
+
+function render(ctx: CanvasRenderingContext2D): void {
   // Clear screen
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -38,13 +44,15 @@ function gameLoop(ctx: CanvasRenderingContext2D): void {
   ctx.font = '8px monospace';
   ctx.textAlign = 'center';
   ctx.fillText('POLE POSITION', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
-
-  requestAnimationFrame(() => gameLoop(ctx));
 }
 
 function main(): void {
   const ctx = setupCanvas();
-  requestAnimationFrame(() => gameLoop(ctx));
+  const loop = new GameLoop((dt) => {
+    update(dt);
+    render(ctx);
+  });
+  loop.start();
 }
 
 main();
