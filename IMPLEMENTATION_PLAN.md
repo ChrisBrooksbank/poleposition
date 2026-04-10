@@ -46,7 +46,7 @@
 - [x] Implement qualifying lap: 90s countdown timer (configurable 90/100/110/120s), detect lap completion, compare time against 8 position thresholds, "Qualifying Start" trigger, fail path if time expires (spec: game-flow.md)
 - [x] Implement grid position display: show "YOU ARE IN Xth" with earned grid slot after qualifying (spec: game-flow.md)
 - [x] Implement Grand Prix race: multi-lap (default 4), 75s initial timer + bonus time per lap (+51/+57/+61s), "Grand Prix Start" trigger, lap counter, game over on timer expiry (spec: game-flow.md)
-- [ ] Implement race complete state: trigger when all laps finished, show time bonus, transition to name entry (spec: game-flow.md)
+- [x] Implement race complete state: trigger when all laps finished, show time bonus, transition to name entry (spec: game-flow.md)
 
 ### Phase 6: Scoring & HUD
 

@@ -26,6 +26,7 @@ import { AttractMode, AttractPhase } from './state/AttractMode';
 import { QualifyingState, QualifyingOutcome } from './state/QualifyingState';
 import { GridDisplayState } from './state/GridDisplayState';
 import { GrandPrixState, GrandPrixOutcome } from './state/GrandPrixState';
+import { RaceCompleteState } from './state/RaceCompleteState';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
@@ -95,6 +96,9 @@ const gridDisplayState = new GridDisplayState();
 
 /** Grand Prix race state — lap counter, countdown timer, and bonus time management. */
 const grandPrixState = new GrandPrixState();
+
+/** Race complete state — captures remaining timer and computes time bonus. */
+const raceCompleteState = new RaceCompleteState();
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -422,6 +426,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
     }
 
     if (grandPrixState.outcome === GrandPrixOutcome.COMPLETE) {
+      raceCompleteState.reset(grandPrixState.timerMs);
       stateMachine.transition(GameState.RACE_COMPLETE);
     } else if (grandPrixState.outcome === GrandPrixOutcome.FAILED) {
       stateMachine.transition(GameState.GAME_OVER);
@@ -461,25 +466,45 @@ stateMachine.register(GameState.GRAND_PRIX, {
   },
 });
 
-// RACE_COMPLETE — all laps finished
+// RACE_COMPLETE — all laps finished; show time bonus then go to name entry
 stateMachine.register(GameState.RACE_COMPLETE, {
   onEnter: () => {
-    stateElapsed = 0;
+    // raceCompleteState was already reset in GRAND_PRIX's update when COMPLETE
   },
   update: (dt) => {
-    stateElapsed += dt;
-    if (stateElapsed > 3000) {
+    raceCompleteState.update(dt);
+    if (raceCompleteState.isDone) {
       stateMachine.transition(GameState.NAME_ENTRY);
     }
   },
   render: (ctx) => {
+    renderRoadBackdrop(ctx);
     ctx.save();
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
     ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+
+    // "RACE COMPLETE" banner
     ctx.fillStyle = '#ffdd00';
-    ctx.font = 'bold 10px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('RACE COMPLETE', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2);
+    ctx.fillText('RACE COMPLETE', LOGICAL_WIDTH / 2, LOGICAL_HEIGHT / 2 - 24);
+
+    // Time bonus
+    const secs = raceCompleteState.remainingTimerSeconds;
+    const bonus = raceCompleteState.timeBonus;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.fillText(
+      `TIME REMAINING  ${String(secs).padStart(3, ' ')} SEC`,
+      LOGICAL_WIDTH / 2,
+      LOGICAL_HEIGHT / 2
+    );
+    ctx.fillText(
+      `TIME BONUS  ${String(bonus).padStart(6, ' ')} PTS`,
+      LOGICAL_WIDTH / 2,
+      LOGICAL_HEIGHT / 2 + 14
+    );
+
     ctx.restore();
   },
 });
