@@ -25,6 +25,7 @@ import { GameStateMachine, GameState } from './state/GameStateMachine';
 import { AttractMode, AttractPhase } from './state/AttractMode';
 import { QualifyingState, QualifyingOutcome } from './state/QualifyingState';
 import { GridDisplayState } from './state/GridDisplayState';
+import { GrandPrixState, GrandPrixOutcome } from './state/GrandPrixState';
 import { TRACK_LENGTH } from './track/fujiSpeedway';
 
 export const LOGICAL_WIDTH = 256;
@@ -91,6 +92,9 @@ const qualifyingState = new QualifyingState();
 
 /** Grid position display state — timer and earned position for the post-qualifying screen. */
 const gridDisplayState = new GridDisplayState();
+
+/** Grand Prix race state — lap counter, countdown timer, and bonus time management. */
+const grandPrixState = new GrandPrixState();
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -406,9 +410,55 @@ stateMachine.register(GameState.GRAND_PRIX, {
     aiCars = aiCarSystem.getCars();
     isOffRoad = false;
     isColliding = false;
+    grandPrixState.reset();
   },
-  update: updateGameplay,
-  render: renderGameplay,
+  update: (dt) => {
+    updateGameplay(dt);
+    const lapCrossed = grandPrixState.update(dt, playerZ, TRACK_LENGTH);
+
+    if (lapCrossed && grandPrixState.outcome === GrandPrixOutcome.PENDING) {
+      // Wrap playerZ back to the start of the new lap
+      playerZ -= TRACK_LENGTH;
+    }
+
+    if (grandPrixState.outcome === GrandPrixOutcome.COMPLETE) {
+      stateMachine.transition(GameState.RACE_COMPLETE);
+    } else if (grandPrixState.outcome === GrandPrixOutcome.FAILED) {
+      stateMachine.transition(GameState.GAME_OVER);
+    }
+  },
+  render: (ctx) => {
+    renderGameplay(ctx);
+
+    // "GRAND PRIX START" announcement banner
+    if (grandPrixState.showAnnouncement) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, HORIZON_Y + 8, LOGICAL_WIDTH, 20);
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('GRAND PRIX START', LOGICAL_WIDTH / 2, HORIZON_Y + 22);
+      ctx.restore();
+    }
+
+    // Countdown timer display
+    const secs = grandPrixState.timerSeconds;
+    ctx.save();
+    ctx.fillStyle = secs <= 10 ? '#ff4444' : '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`TIME ${String(secs).padStart(3, ' ')}`, LOGICAL_WIDTH - 4, 12);
+    ctx.restore();
+
+    // Lap counter display
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`LAP ${grandPrixState.currentLap}/${grandPrixState.totalLaps}`, 4, 12);
+    ctx.restore();
+  },
 });
 
 // RACE_COMPLETE — all laps finished
