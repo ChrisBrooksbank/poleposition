@@ -137,16 +137,18 @@ export class AICarSystem {
   /**
    * Advance all AI cars by one frame.
    *
-   * @param dt  Delta time in milliseconds.
+   * @param dt              Delta time in milliseconds.
+   * @param speedMultiplier Optional multiplier applied to all AI car speeds (default 1.0).
+   *                        Used by the Extended Rank DIP setting (A=0.55 … H=1.30).
    */
-  update(dt: number): void {
+  update(dt: number, speedMultiplier = 1.0): void {
     this.time += dt / 1000;
 
     for (let i = 0; i < AI_CAR_CONFIGS.length; i++) {
       const cfg = AI_CAR_CONFIGS[i];
 
       // Advance along track, wrapping at the lap boundary.
-      const advance = cfg.speedMph * MPH_TO_MS * (dt / 1000);
+      const advance = cfg.speedMph * speedMultiplier * MPH_TO_MS * (dt / 1000);
       this.carZ[i] = (this.carZ[i] + advance) % TRACK_LENGTH;
 
       // Sinusoidal lateral weave around the base lane.

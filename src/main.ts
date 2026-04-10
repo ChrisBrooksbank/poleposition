@@ -38,6 +38,8 @@ import { TireScreech } from './audio/TireScreech';
 import { CollisionSound } from './audio/CollisionSound';
 import { DiscreteSFX } from './audio/DiscreteSFX';
 import { VoiceAnnouncements } from './audio/VoiceAnnouncements';
+import { DIPSwitchSettings } from './settings/DIPSwitchSettings';
+import { DIPSwitchPanel } from './settings/DIPSwitchPanel';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -74,7 +76,11 @@ const explosionRenderer = new ExplosionRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const aiCarRenderer = new AICarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
 const input = new InputHandler();
-const physics = new PlayerPhysics();
+/** DIP switch configuration — persisted in localStorage across sessions. */
+const dipSettings = new DIPSwitchSettings();
+/** Settings panel UI — shown in SETTINGS state. */
+const dipPanel = new DIPSwitchPanel(dipSettings);
+let physics = new PlayerPhysics(dipSettings.topSpeedMph);
 const steering = new SteeringPhysics();
 const collisionDetector = new CollisionDetector();
 let explosionState = new ExplosionState();
@@ -142,7 +148,7 @@ const voiceAnnouncements = new VoiceAnnouncements(audioSystem);
 
 function updateGameplay(dt: number): void {
   // Advance AI cars every frame (they move regardless of player state).
-  aiCarSystem.update(dt);
+  aiCarSystem.update(dt, dipSettings.aiSpeedMultiplier);
   aiCars = aiCarSystem.getCars();
 
   // During an explosion the car is frozen — advance the timer and respawn when done.
@@ -300,6 +306,8 @@ stateMachine.register(GameState.ATTRACT, {
       if (startPressed) {
         audioSystem.resume();
         stateMachine.transition(GameState.COIN_INSERT);
+      } else if (input.isKeyDown('KeyD')) {
+        stateMachine.transition(GameState.SETTINGS);
       }
     }
   },
@@ -348,6 +356,14 @@ stateMachine.register(GameState.ATTRACT, {
       ctx.fillText('PRESS ENTER TO START', LOGICAL_WIDTH / 2, 120);
       ctx.restore();
     }
+
+    // Settings hint (static, smaller text)
+    ctx.save();
+    ctx.fillStyle = '#666666';
+    ctx.font = '6px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('D - DIP SETTINGS', LOGICAL_WIDTH / 2, 140);
+    ctx.restore();
   },
 });
 
@@ -380,14 +396,14 @@ stateMachine.register(GameState.COIN_INSERT, {
 stateMachine.register(GameState.QUALIFYING, {
   onEnter: () => {
     playerZ = 0;
-    physics.reset();
+    physics = new PlayerPhysics(dipSettings.topSpeedMph);
     steering.reset();
     explosionState = new ExplosionState();
     aiCarSystem.reset();
     aiCars = aiCarSystem.getCars();
     isOffRoad = false;
     isColliding = false;
-    qualifyingState.reset();
+    qualifyingState.reset(dipSettings.qualifyingTime);
     scoreTracker.reset();
     engineSound.start();
     tireScreech.start();
@@ -433,6 +449,7 @@ stateMachine.register(GameState.QUALIFYING, {
       score: scoreTracker.score,
       timerSeconds: qualifyingState.timerSeconds,
       speedMph: physics.speed,
+      useKph: dipSettings.useKph,
       racePosition: racePos,
     });
   },
@@ -479,14 +496,14 @@ stateMachine.register(GameState.GRID_DISPLAY, {
 stateMachine.register(GameState.GRAND_PRIX, {
   onEnter: () => {
     playerZ = 0;
-    physics.reset();
+    physics = new PlayerPhysics(dipSettings.topSpeedMph);
     steering.reset();
     explosionState = new ExplosionState();
     aiCarSystem.reset();
     aiCars = aiCarSystem.getCars();
     isOffRoad = false;
     isColliding = false;
-    grandPrixState.reset();
+    grandPrixState.reset(dipSettings.lapCount);
     // Re-initialise overtake tracking without clearing the score accumulated
     // during qualifying — just reset the per-car baseline.
     scoreTracker.recordOvertakes(
@@ -541,6 +558,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
       score: scoreTracker.score,
       timerSeconds: grandPrixState.timerSeconds,
       speedMph: physics.speed,
+      useKph: dipSettings.useKph,
       lapCurrent: grandPrixState.currentLap,
       lapTotal: grandPrixState.totalLaps,
       racePosition: racePos,
@@ -736,6 +754,28 @@ stateMachine.register(GameState.NAME_ENTRY, {
     }
 
     ctx.restore();
+  },
+});
+
+// SETTINGS — DIP switch configuration panel accessible from ATTRACT
+stateMachine.register(GameState.SETTINGS, {
+  onEnter: () => {
+    dipPanel.reset();
+  },
+  update: () => {
+    dipPanel.update(
+      input.throttle,
+      input.brake,
+      input.left,
+      input.right,
+      input.isKeyDown('Enter') || input.isKeyDown('Space')
+    );
+    if (dipPanel.isDone) {
+      stateMachine.transition(GameState.ATTRACT);
+    }
+  },
+  render: (ctx) => {
+    dipPanel.render(ctx, LOGICAL_WIDTH, LOGICAL_HEIGHT);
   },
 });
 

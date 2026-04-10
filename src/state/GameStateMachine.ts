@@ -31,6 +31,7 @@ export enum GameState {
   RACE_COMPLETE = 'RACE_COMPLETE',
   GAME_OVER = 'GAME_OVER',
   NAME_ENTRY = 'NAME_ENTRY',
+  SETTINGS = 'SETTINGS',
 }
 
 export interface StateHandlers {
