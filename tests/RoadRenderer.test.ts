@@ -10,6 +10,7 @@ import {
   ROAD_COLORS,
   RUMBLE_COLORS,
   segmentIndex,
+  computeCurveOffsets,
 } from '../src/renderer/RoadRenderer';
 
 const WIDTH = 256;
@@ -218,5 +219,82 @@ describe('segmentIndex', () => {
     expect(segmentIndex(0.5, 1.0)).toBe(0);
     expect(segmentIndex(1.5, 1.0)).toBe(1);
     expect(segmentIndex(2.5, 1.0)).toBe(0);
+  });
+});
+
+describe('computeCurveOffsets', () => {
+  const HEIGHT = 224;
+  const horizonY = HORIZON_Y; // 112
+
+  it('returns all-zero offsets when getCurve always returns 0', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0);
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsets[y]).toBe(0);
+    }
+  });
+
+  it('entries at or above the horizon are always zero', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 1);
+    for (let y = 0; y <= horizonY; y++) {
+      expect(offsets[y]).toBe(0);
+    }
+  });
+
+  it('returns a Float32Array of length equal to height', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 1);
+    expect(offsets).toBeInstanceOf(Float32Array);
+    expect(offsets.length).toBe(HEIGHT);
+  });
+
+  it('positive curve: far strips (near horizon) have larger offset than near strips (bottom)', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    const nearOffset = offsets[HEIGHT - 1]; // closest scanline
+    const farOffset = offsets[horizonY + 1]; // farthest visible scanline
+    expect(farOffset).toBeGreaterThan(nearOffset);
+  });
+
+  it('positive curve produces positive offsets throughout the road area', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    expect(offsets[HEIGHT - 1]).toBeGreaterThan(0);
+    expect(offsets[horizonY + 1]).toBeGreaterThan(0);
+  });
+
+  it('negative curve produces negative offsets (left curve)', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => -0.01);
+    expect(offsets[horizonY + 1]).toBeLessThan(0);
+    expect(offsets[HEIGHT - 1]).toBeLessThan(0);
+  });
+
+  it('offsets are monotonically increasing in magnitude from bottom to horizon for constant curve', () => {
+    const offsets = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    // Sample a few scanlines; each should have a smaller offset than the one above it.
+    const ys = [HEIGHT - 2, HEIGHT - 20, HEIGHT - 50, horizonY + 20, horizonY + 2];
+    for (let i = 1; i < ys.length; i++) {
+      // ys[i] is higher (farther) than ys[i-1], so offset should be larger
+      expect(offsets[ys[i]]).toBeGreaterThan(offsets[ys[i - 1]]);
+    }
+  });
+
+  it('playerZ shifts which segment curve values are sampled', () => {
+    // Curve function returns +1 for worldZ < threshold, 0 otherwise.
+    const threshold = 5;
+    const curve = (wz: number) => (wz < threshold ? 1 : 0);
+    const offsetsAt0 = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, curve);
+    // With playerZ = 100, all worldZ + 100 > threshold → curve = 0 everywhere
+    const offsetsAt100 = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 100, curve);
+    // At playerZ=100, curve is always 0, so offsets should be all zero
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsetsAt100[y]).toBe(0);
+    }
+    // At playerZ=0, near strips (small worldZ < 5) should contribute
+    expect(offsetsAt0[HEIGHT - 1]).toBeGreaterThan(0);
+  });
+
+  it('doubled curve strength doubles the offsets', () => {
+    const offsets1 = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.01);
+    const offsets2 = computeCurveOffsets(HEIGHT, horizonY, CAMERA_DEPTH, 0, () => 0.02);
+    for (let y = horizonY + 1; y < HEIGHT; y++) {
+      expect(offsets2[y]).toBeCloseTo(offsets1[y] * 2, 5);
+    }
   });
 });

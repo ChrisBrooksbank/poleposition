@@ -48,6 +48,74 @@ export const ROAD_COLORS: readonly [string, string] = ['#6b6b6b', '#787878'];
 export const RUMBLE_COLORS: readonly [string, string] = ['#cc2222', '#ffffff'];
 
 /**
+ * Returns the lateral curve strength at a given world-Z position.
+ *
+ * Positive values = curve to the right; negative = curve to the left.
+ * The magnitude controls how many screen pixels of horizontal offset are
+ * accumulated per unit of world distance at that position.
+ */
+export type CurveFunction = (worldZ: number) => number;
+
+/**
+ * Compute per-scanline horizontal screen-space offsets that implement a
+ * curved road appearance.
+ *
+ * Accumulates from the bottom of the road area (near) upward toward the
+ * horizon (far).  Each scanline contributes `getCurve(worldZ) × ΔworldZ`
+ * to a running total, so farther strips receive a larger offset.  In
+ * perspective this makes the road appear to sweep sideways in the distance —
+ * the classic pseudo-3D curve effect.  The topmost visible strip carries the
+ * maximum accumulated offset, causing the vanishing point to sway
+ * side-to-side on curved sections.
+ *
+ * @param height      Canvas height in pixels.
+ * @param horizonY    Screen Y of the horizon line.
+ * @param cameraDepth Camera depth constant (same value used in projection).
+ * @param playerZ     Player's current world-Z position added to the scanline
+ *                    worldZ when sampling getCurve, so the correct track
+ *                    segment is looked up as the player drives forward.
+ * @param getCurve    Curve-strength function (see {@link CurveFunction}).
+ * @returns           Float32Array of length `height` indexed by screen Y.
+ *                    Entries for y ≤ horizonY are always 0.
+ */
+export function computeCurveOffsets(
+  height: number,
+  horizonY: number,
+  cameraDepth: number,
+  playerZ: number,
+  getCurve: CurveFunction
+): Float32Array {
+  const offsets = new Float32Array(height);
+  const maxDepth = height - horizonY;
+  let dx = 0;
+
+  // Iterate from near (bottom) to far (toward horizon).
+  // As y decreases, worldZ increases (strips are farther from the player).
+  for (let y = height - 1; y > horizonY; y--) {
+    const depth = y - horizonY;
+    const worldZ = (cameraDepth * maxDepth) / depth;
+
+    // World-Z of the next (farther) scanline one pixel up.
+    const nextDepth = depth - 1; // (y - 1) - horizonY
+    const nextWorldZ = nextDepth > 0 ? (cameraDepth * maxDepth) / nextDepth : worldZ * 2;
+
+    // Accumulate: curve strength × worldZ × ΔworldZ.
+    //
+    // For a road with constant curvature c, the lateral world-space position
+    // of the road centre at depth Z is c·Z²/2 (the integral of c·z dz).
+    // Feeding this world-space value through projectScanline's `cameraX * scale`
+    // (where scale = cameraDepth / Z) yields a screen offset of c·Z·cameraDepth/2
+    // which grows linearly with Z — correctly placing the vanishing point further
+    // to one side the deeper into a curve the player has travelled.
+    const deltaZ = nextWorldZ - worldZ;
+    dx += getCurve(worldZ + playerZ) * worldZ * deltaZ;
+    offsets[y] = dx;
+  }
+
+  return offsets;
+}
+
+/**
  * Return which of the two palette entries (0 or 1) applies to a given
  * world-space Z position.
  *
@@ -161,16 +229,29 @@ export class RoadRenderer {
    * create the classic depth-cue stripe pattern.  Rumble strips alternate
    * between red and white on the same segment boundaries.
    *
-   * @param ctx      Canvas 2D rendering context.
-   * @param cameraX  Lateral camera offset (see projectScanline).
-   * @param playerZ  Player's absolute world-Z position (normalised world units).
-   *                 Scrolls the segment colour pattern as the car moves forward.
+   * When `getCurve` is supplied, the road curves are rendered by accumulating
+   * a per-scanline horizontal screen-space offset (see {@link computeCurveOffsets}).
+   * Far strips receive a larger offset than near strips, so the vanishing point
+   * sways side-to-side on curved sections.
+   *
+   * @param ctx       Canvas 2D rendering context.
+   * @param playerZ   Player's absolute world-Z position (normalised world units).
+   *                  Scrolls the segment colour pattern and curve lookup as the
+   *                  car moves forward.
+   * @param getCurve  Optional curve-strength function.  When omitted the road
+   *                  is rendered as a straight.
    */
-  render(ctx: CanvasRenderingContext2D, cameraX = 0, playerZ = 0): void {
+  render(ctx: CanvasRenderingContext2D, playerZ = 0, getCurve?: CurveFunction): void {
     const maxDepth = this.height - this.horizonY;
 
+    // Pre-compute per-scanline curve offsets (all zeros when road is straight).
+    const xOffsets: Float32Array =
+      getCurve != null
+        ? computeCurveOffsets(this.height, this.horizonY, this.cameraDepth, playerZ, getCurve)
+        : new Float32Array(this.height);
+
     for (let y = this.horizonY + 1; y < this.height; y++) {
-      const { roadLeft, roadRight, scale } = this.projectScanline(y, cameraX);
+      const { roadLeft, roadRight, scale } = this.projectScanline(y, xOffsets[y]);
 
       // World-space z for this scanline.
       const depth = y - this.horizonY;
