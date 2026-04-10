@@ -15,6 +15,7 @@ import { getTrackCurve } from './track/fujiSpeedway';
 import { InputHandler } from './input/InputHandler';
 import { PlayerPhysics } from './physics/PlayerPhysics';
 import { SteeringPhysics, MPH_TO_MS } from './physics/SteeringPhysics';
+import { PlayerCarRenderer } from './renderer/PlayerCarRenderer';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -46,6 +47,7 @@ export function setupCanvas(): CanvasRenderingContext2D {
 const roadRenderer = new RoadRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const billboardRenderer = new BillboardRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+const playerCarRenderer = new PlayerCarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
 const input = new InputHandler();
 const physics = new PlayerPhysics();
@@ -107,6 +109,10 @@ function render(ctx: CanvasRenderingContext2D): void {
     ctx.fillRect(0, HORIZON_Y, LOGICAL_WIDTH, LOGICAL_HEIGHT - HORIZON_Y);
     ctx.restore();
   }
+
+  // Render player car sprite (always on top of road and billboards)
+  const steer = PlayerCarRenderer.steerState(input.left, input.right);
+  playerCarRenderer.render(ctx, playerX, steer);
 }
 
 function main(): void {
