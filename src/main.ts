@@ -34,6 +34,7 @@ import { HighScoreManager } from './state/HighScoreManager';
 import { NameEntryState, NAME_ENTRY_LETTERS } from './state/NameEntryState';
 import { AudioSystem } from './audio/AudioSystem';
 import { EngineSound } from './audio/EngineSound';
+import { TireScreech } from './audio/TireScreech';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -125,6 +126,8 @@ let playerRank = 0;
 const audioSystem = new AudioSystem();
 /** Engine sound — continuous oscillator tracking car speed during gameplay. */
 const engineSound = new EngineSound(audioSystem);
+/** Tire screech — band-pass filtered noise driven by steering input. */
+const tireScreech = new TireScreech(audioSystem);
 
 // ─── Gameplay logic (shared by QUALIFYING and GRAND_PRIX) ────────────────────
 
@@ -182,6 +185,10 @@ function updateGameplay(dt: number): void {
 
   // Update engine sound pitch to match current speed
   engineSound.update(physics.speed);
+
+  // Update tire screech intensity: absolute steering input, suppressed off-road
+  const steerInput = (input.left ? 1 : 0) + (input.right ? 1 : 0);
+  tireScreech.update(steerInput, isOffRoad);
 }
 
 function renderGameplay(ctx: CanvasRenderingContext2D): void {
@@ -369,6 +376,7 @@ stateMachine.register(GameState.QUALIFYING, {
     qualifyingState.reset();
     scoreTracker.reset();
     engineSound.start();
+    tireScreech.start();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -469,6 +477,7 @@ stateMachine.register(GameState.GRAND_PRIX, {
       TRACK_LENGTH
     );
     engineSound.start();
+    tireScreech.start();
   },
   update: (dt) => {
     updateGameplay(dt);
@@ -524,6 +533,7 @@ stateMachine.register(GameState.RACE_COMPLETE, {
   onEnter: () => {
     // raceCompleteState was already reset in GRAND_PRIX's update when COMPLETE
     engineSound.stop();
+    tireScreech.stop();
   },
   update: (dt) => {
     raceCompleteState.update(dt);
@@ -573,6 +583,7 @@ stateMachine.register(GameState.GAME_OVER, {
   onEnter: () => {
     stateElapsed = 0;
     engineSound.stop();
+    tireScreech.stop();
   },
   update: (dt) => {
     stateElapsed += dt;

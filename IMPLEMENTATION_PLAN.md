@@ -58,7 +58,7 @@
 
 - [x] Initialize Web Audio API: AudioContext, master gain node, channel mixing without clipping (spec: audio-system.md)
 - [x] Implement engine sound: continuous oscillator (sawtooth/square), frequency mapped to car speed, smooth transitions, idle tone at rest (spec: audio-system.md)
-- [ ] Implement tire screech: band-pass filtered noise triggered on sharp turns, intensity proportional to turn sharpness, suppressed when off-road (spec: audio-system.md)
+- [x] Implement tire screech: band-pass filtered noise triggered on sharp turns, intensity proportional to turn sharpness, suppressed when off-road (spec: audio-system.md)
 - [ ] Implement collision sound: LFSR-style noise burst with ~3s decay envelope (spec: audio-system.md)
 - [ ] Implement discrete SFX: coin insert, qualifying fanfare, countdown beeps, qualifying complete (non-pole + pole variants), race complete, time extend, puddle hit, time bonus tick, overtake tick, grass rumble loop (spec: audio-system.md)
 - [ ] Implement voice announcements: synthesized or procedurally filtered "Qualifying Start" and "Grand Prix Start" with 4-bit downsampling / low-pass to match Namco retro character (spec: audio-system.md)
