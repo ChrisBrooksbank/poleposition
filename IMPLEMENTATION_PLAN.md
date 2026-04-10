@@ -56,7 +56,7 @@
 
 ### Phase 7: Audio System
 
-- [ ] Initialize Web Audio API: AudioContext, master gain node, channel mixing without clipping (spec: audio-system.md)
+- [x] Initialize Web Audio API: AudioContext, master gain node, channel mixing without clipping (spec: audio-system.md)
 - [ ] Implement engine sound: continuous oscillator (sawtooth/square), frequency mapped to car speed, smooth transitions, idle tone at rest (spec: audio-system.md)
 - [ ] Implement tire screech: band-pass filtered noise triggered on sharp turns, intensity proportional to turn sharpness, suppressed when off-road (spec: audio-system.md)
 - [ ] Implement collision sound: LFSR-style noise burst with ~3s decay envelope (spec: audio-system.md)
