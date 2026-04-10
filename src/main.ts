@@ -19,6 +19,8 @@ import { PlayerCarRenderer } from './renderer/PlayerCarRenderer';
 import { CollisionDetector } from './physics/CollisionDetector';
 import { ExplosionState } from './state/ExplosionState';
 import { ExplosionRenderer } from './renderer/ExplosionRenderer';
+import { AICarSystem } from './ai/AICarSystem';
+import { AICarRenderer } from './renderer/AICarRenderer';
 
 export const LOGICAL_WIDTH = 256;
 export const LOGICAL_HEIGHT = 224;
@@ -52,12 +54,14 @@ const bgRenderer = new BackgroundRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const billboardRenderer = new BillboardRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const playerCarRenderer = new PlayerCarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 const explosionRenderer = new ExplosionRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
+const aiCarRenderer = new AICarRenderer(LOGICAL_WIDTH, LOGICAL_HEIGHT);
 
 const input = new InputHandler();
 const physics = new PlayerPhysics();
 const steering = new SteeringPhysics();
 const collisionDetector = new CollisionDetector();
 const explosionState = new ExplosionState();
+const aiCarSystem = new AICarSystem();
 
 /** Player's world-Z position in metres. Advances each frame based on speed. */
 let playerZ = 0;
@@ -68,7 +72,14 @@ let isOffRoad = false;
 /** Whether the player is currently touching a collision object (billboard or AI car). */
 let isColliding = false;
 
+/** Snapshot of AI car states updated each frame (reused for collision + rendering). */
+let aiCars = aiCarSystem.getCars();
+
 function update(dt: number): void {
+  // Advance AI cars every frame (they move regardless of player state).
+  aiCarSystem.update(dt);
+  aiCars = aiCarSystem.getCars();
+
   // During an explosion the car is frozen — advance the timer and respawn when done.
   if (explosionState.isExploding) {
     const shouldRespawn = explosionState.update(dt);
@@ -94,10 +105,10 @@ function update(dt: number): void {
     physics.applyOffRoadPenalty(dt);
   }
 
-  // Collision detection: player vs billboards and AI cars (empty for now)
+  // Collision detection: player vs billboards and AI cars
   isColliding =
     collisionDetector.checkBillboards(playerZ, steering.playerX) ||
-    collisionDetector.checkAICars(playerZ, steering.playerX, []);
+    collisionDetector.checkAICars(playerZ, steering.playerX, aiCars);
 
   // Trigger explosion on fresh collision
   if (isColliding) {
@@ -131,6 +142,9 @@ function render(ctx: CanvasRenderingContext2D): void {
 
   // Render distance-scaled billboard sprites on road edges
   billboardRenderer.render(ctx, playerZ, getTrackCurve, playerX);
+
+  // Render AI opponent cars (Z-sorted, same perspective projection as billboards)
+  aiCarRenderer.render(ctx, aiCars, playerZ, getTrackCurve, playerX);
 
   // Off-road visual feedback: semi-transparent green overlay on the road area
   if (isOffRoad) {

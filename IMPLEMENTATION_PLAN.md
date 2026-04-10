@@ -37,7 +37,7 @@
 
 - [x] Implement collision detection: player car vs AI car and vs billboard bounding boxes in road-space coordinates (spec: driving-mechanics.md)
 - [x] Implement explosion + respawn: 4-6 frame explosion animation over ~2.5s, then car reappears at road center at zero speed (spec: driving-mechanics.md)
-- [ ] Implement AI opponent system: 7 cars with predetermined path offsets, distance-based sprite scaling, 3-4 color variants, rendered via the same scanline Z-sort as billboards (spec: driving-mechanics.md)
+- [x] Implement AI opponent system: 7 cars with predetermined path offsets, distance-based sprite scaling, 3-4 color variants, rendered via the same scanline Z-sort as billboards (spec: driving-mechanics.md)
 
 ### Phase 5: Game State Machine (game flow backbone)
 
