@@ -41,7 +41,14 @@ export function drawTitle(ctx: CanvasRenderingContext2D, elapsed: number, topSco
   text(ctx, `TOP  ${String(topScore).padStart(6, '0')}`, W / 2, 104, '8px monospace', '#ffffff');
   if (blink(elapsed))
     text(ctx, 'PRESS ENTER TO START', W / 2, 132, 'bold 8px monospace', '#ffffff');
-  text(ctx, 'ARROWS DRIVE   SHIFT GEAR   P PAUSE   C CRT', W / 2, 190, '6px monospace', '#aaaaaa');
+  text(
+    ctx,
+    'ARROWS/WASD DRIVE  SHIFT GEAR  P PAUSE  M MUTE  C CRT',
+    W / 2,
+    190,
+    '6px monospace',
+    '#aaaaaa'
+  );
   text(ctx, 'D - DIP SETTINGS', W / 2, 202, '6px monospace', '#777777');
 }
 

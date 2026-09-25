@@ -96,3 +96,19 @@ describe('InputHandler', () => {
     });
   });
 });
+
+describe('InputHandler WASD aliases', () => {
+  it('treats W/A/S/D like the arrow keys', () => {
+    const input = new InputHandler(new EventTarget());
+    input.pressKey('KeyW');
+    input.pressKey('KeyA');
+    expect(input.throttle).toBe(true);
+    expect(input.left).toBe(true);
+    expect(input.right).toBe(false);
+    input.releaseKey('KeyA');
+    input.pressKey('KeyD');
+    input.pressKey('KeyS');
+    expect(input.right).toBe(true);
+    expect(input.brake).toBe(true);
+  });
+});

@@ -48,19 +48,19 @@ export class InputHandler {
   }
 
   get left(): boolean {
-    return this.keys.has('ArrowLeft');
+    return this.keys.has('ArrowLeft') || this.keys.has('KeyA');
   }
 
   get right(): boolean {
-    return this.keys.has('ArrowRight');
+    return this.keys.has('ArrowRight') || this.keys.has('KeyD');
   }
 
   get throttle(): boolean {
-    return this.keys.has('ArrowUp');
+    return this.keys.has('ArrowUp') || this.keys.has('KeyW');
   }
 
   get brake(): boolean {
-    return this.keys.has('ArrowDown');
+    return this.keys.has('ArrowDown') || this.keys.has('KeyS');
   }
 
   get gear(): Gear {

@@ -176,6 +176,7 @@ export class Game {
     const unlock = () => this.audio.resume();
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
+      if (e.code === 'KeyM' && this.audio.isReady) this.toggleMute();
     });
     window.addEventListener('keydown', unlock);
     window.addEventListener('pointerdown', unlock);
@@ -247,6 +248,13 @@ export class Game {
     this.activateCourse(this.courseIndex + step);
     this.resetPositions(0);
     this.sfx.triggerCountdownBeep();
+  }
+
+  private muted = false;
+
+  private toggleMute(): void {
+    this.muted = !this.muted;
+    this.audio.setMasterVolume(this.muted ? 0 : 1);
   }
 
   private togglePause(): void {
