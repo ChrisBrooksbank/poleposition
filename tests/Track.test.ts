@@ -32,7 +32,7 @@ describe('Track', () => {
     expect(pts[0]).toMatchObject({ s: 0, x: 0, z: 0 });
     expect(pts[100].z).toBeCloseTo(100, 5);
     expect(end.heading).toBeCloseTo(0.02 * 50, 5);
-    expect(end.x).toBeGreaterThan(0);
+    expect(end.x).toBeLessThan(0);
     expect(end.y).toBeCloseTo(0.5, 5);
   });
 

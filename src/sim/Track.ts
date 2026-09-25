@@ -25,7 +25,7 @@ export interface CenterlinePoint {
   x: number;
   y: number;
   z: number;
-  /** Heading in radians; 0 points along +z, positive turns right (towards +x). */
+  /** Heading in radians; 0 points along +z, positive turns right (towards -x, as seen looking down +z). */
   heading: number;
 }
 
@@ -83,7 +83,7 @@ export class Track {
       if (ds <= 0) break;
       const mid = s + ds / 2;
       heading += this.curvatureAt(mid) * ds;
-      x += Math.sin(heading) * ds;
+      x -= Math.sin(heading) * ds;
       z += Math.cos(heading) * ds;
       y += this.slopeAt(mid) * ds;
     }

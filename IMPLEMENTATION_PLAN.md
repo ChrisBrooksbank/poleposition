@@ -18,9 +18,9 @@ Supersedes the Canvas 2D plan (completed; see git history). Spec: specs/remaster
 Audit notes (Phase 1): old sim uses screen-pixel units (SteeringPhysics playerX, curve values tuned for 256x224) and the Fuji track is 6 guessed sections; physics, track and AI must be redone in metres (new code in src/sim/). Reusable mostly as-is: audio/, state/ (timers, scoring, high scores, name entry), settings/, input/. Old renderers are discarded. New work is served at remaster.html (src/remaster/) until integration replaces index.html.
 
 ### Phase 2: Tracks
-- [ ] Fuji Speedway track data faithful to research.md section 5 (straight, right, left, right, hairpin, long right)
-- [ ] Test Course, Suzuka, Seaside track data
-- [ ] Road ribbon mesh generator from track data (elevation, banking-free curves), rumble strips, lane markings, start line
+- [x] Fuji Speedway track data faithful to research.md section 5 (straight, right, left, right, hairpin, long right). Note: heading closes (net 360 deg) but position does not (~1.6 km gap), like the original's looping road; at the finish line the car wraps to s=0 with the same heading. Revisit if scenery needs a true closed loop.
+- [ ] Test Course, Suzuka, Seaside track data (needs research on the real practice layouts first)
+- [x] Road ribbon mesh generator (src/remaster/roadGeometry.ts, RoadMesh.ts): kerbs, edge lines, stripes. Still to do: start line, centre dashes, verify visually in browser
 
 ### Phase 3: Simulation fidelity
 - [ ] Player physics: throttle/brake, low/high gear, speeds, off-road slowdown (research.md 1, 2)
