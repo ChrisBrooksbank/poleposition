@@ -46,7 +46,7 @@ describe('defaultDIPConfig', () => {
     expect(cfg.practiceRank).toBe('C');
     expect(cfg.extendedRank).toBe('E');
     expect(cfg.lapCount).toBe(4);
-    expect(cfg.speed).toBe('AVERAGE');
+    expect(cfg.speed).toBe('DEFAULT');
     expect(cfg.units).toBe('MPH');
   });
 
@@ -66,7 +66,7 @@ describe('DIPSwitchSettings — construction', () => {
     expect(s.practiceRank).toBe('C');
     expect(s.extendedRank).toBe('E');
     expect(s.lapCount).toBe(4);
-    expect(s.speed).toBe('AVERAGE');
+    expect(s.speed).toBe('DEFAULT');
     expect(s.units).toBe('MPH');
   });
 
@@ -127,7 +127,7 @@ describe('DIPSwitchSettings — construction', () => {
   it('ignores unknown speed values and keeps default', () => {
     store[DIPSwitchSettings.STORAGE_KEY] = JSON.stringify({ speed: 'TURBO' });
     const s = new DIPSwitchSettings();
-    expect(s.speed).toBe('AVERAGE');
+    expect(s.speed).toBe('DEFAULT');
   });
 
   it('ignores unknown units values and keeps default', () => {
@@ -188,15 +188,21 @@ describe('DIPSwitchSettings — update', () => {
     expect(s.qualifyingTime).toBe(90);
     expect(s.practiceRank).toBe('C');
     expect(s.lapCount).toBe(4);
-    expect(s.speed).toBe('AVERAGE');
+    expect(s.speed).toBe('DEFAULT');
   });
 });
 
 // ─── DIPSwitchSettings — derived properties ──────────────────────────────────
 
 describe('DIPSwitchSettings — topSpeedMph', () => {
+  it('returns 225 for the DEFAULT speed', () => {
+    const s = new DIPSwitchSettings();
+    expect(s.topSpeedMph).toBe(225);
+  });
+
   it('returns 195 for AVERAGE speed', () => {
     const s = new DIPSwitchSettings();
+    s.update({ speed: 'AVERAGE' });
     expect(s.topSpeedMph).toBe(195);
   });
 
@@ -329,10 +335,11 @@ describe('DIPSwitchSettings — option arrays', () => {
     expect(EXTENDED_RANK_OPTIONS[7]).toBe('H');
   });
 
-  it('SPEED_OPTIONS has exactly AVERAGE and HIGH', () => {
+  it('SPEED_OPTIONS has exactly AVERAGE, DEFAULT and HIGH', () => {
     expect(SPEED_OPTIONS).toContain('AVERAGE');
+    expect(SPEED_OPTIONS).toContain('DEFAULT');
     expect(SPEED_OPTIONS).toContain('HIGH');
-    expect(SPEED_OPTIONS).toHaveLength(2);
+    expect(SPEED_OPTIONS).toHaveLength(3);
   });
 
   it('UNITS_OPTIONS has exactly MPH and KPH', () => {

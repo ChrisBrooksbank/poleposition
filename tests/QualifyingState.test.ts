@@ -267,3 +267,14 @@ describe('QualifyingState — reset', () => {
     expect(qs.lapTimeSecs).toBe(0);
   });
 });
+
+describe('QualifyingState time scale', () => {
+  it('judges lap time against thresholds scaled to the circuit length', () => {
+    const q = new QualifyingState();
+    q.reset(90, 0.5);
+    q.update(40_000, 4360, 4360);
+    // 40 s on a circuit twice the reference length is equivalent to 20 s: pole position.
+    expect(q.lapTimeSecs).toBeCloseTo(40, 3);
+    expect(q.gridPosition).toBe(1);
+  });
+});

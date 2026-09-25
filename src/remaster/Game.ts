@@ -618,7 +618,7 @@ export class Game {
       onEnter: () => {
         const slot = Math.max(0, (this.qualifying.gridPosition || AI_COUNT + 1) - 1);
         this.ai.startGrid(slot);
-        this.grandPrix.reset(this.dip.lapCount);
+        this.grandPrix.reset(this.dip.lapCount, this.track.length / REFERENCE_LAP_LENGTH);
         this.beginRun(gridSlot(slot).distance);
         this.car.lateral = gridSlot(slot).lateral;
         this.prevLateral = this.car.lateral;

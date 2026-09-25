@@ -284,3 +284,19 @@ describe('GrandPrixState — reset', () => {
     expect(gp.totalLaps).toBe(6);
   });
 });
+
+describe('GrandPrixState time scale', () => {
+  it('scales the starting time and lap bonuses for longer circuits', () => {
+    const gp = new GrandPrixState();
+    gp.reset(4, 2);
+    expect(gp.timerMs).toBe(150_000);
+    gp.update(0, 4400, 4360);
+    expect(gp.timerMs).toBe(150_000 + 102_000);
+  });
+
+  it('defaults to a scale of one', () => {
+    const gp = new GrandPrixState();
+    gp.reset(4);
+    expect(gp.timerMs).toBe(75_000);
+  });
+});

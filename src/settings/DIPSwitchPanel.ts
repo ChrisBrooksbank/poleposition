@@ -73,7 +73,7 @@ const ROWS: readonly SettingsRow[] = [
     key: 'speed',
     label: 'SPEED',
     options: SPEED_OPTIONS,
-    format: (v) => (v === 'AVERAGE' ? 'AVG' : String(v)),
+    format: (v) => (v === 'AVERAGE' ? 'AVG' : v === 'DEFAULT' ? 'DEF' : String(v)),
   },
   {
     key: 'units',

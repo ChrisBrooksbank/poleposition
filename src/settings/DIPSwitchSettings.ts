@@ -9,7 +9,7 @@
  *   practiceRank    — qualifying difficulty A–H (default C, cutoff at 73 s)
  *   extendedRank    — race difficulty A–H (default E, normal AI speed)
  *   lapCount        — number of Grand Prix laps (3/4/5/6, default 4)
- *   speed           — top speed tier: AVERAGE (195 MPH) or HIGH (244 MPH)
+ *   speed           — top speed tier: AVERAGE (195 MPH), DEFAULT (225 MPH) or HIGH (244 MPH)
  *   units           — display units for speed readout: MPH or KPH
  */
 
@@ -24,7 +24,7 @@ export type PracticeRank = (typeof PRACTICE_RANK_OPTIONS)[number];
 export const EXTENDED_RANK_OPTIONS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
 export type ExtendedRank = (typeof EXTENDED_RANK_OPTIONS)[number];
 
-export const SPEED_OPTIONS = ['AVERAGE', 'HIGH'] as const;
+export const SPEED_OPTIONS = ['AVERAGE', 'DEFAULT', 'HIGH'] as const;
 export type SpeedSetting = (typeof SPEED_OPTIONS)[number];
 
 export const UNITS_OPTIONS = ['MPH', 'KPH'] as const;
@@ -46,17 +46,18 @@ export function defaultDIPConfig(): DIPSwitchConfig {
     practiceRank: 'C',
     extendedRank: 'E',
     lapCount: 4,
-    speed: 'AVERAGE',
+    speed: 'DEFAULT',
     units: 'MPH',
   };
 }
 
 /**
  * Top speed in MPH for each Speed DIP setting.
- * Research: Average=195, High=244 (from arcade manual DIP table).
+ * Research: Average=195, Default=225, High=244 (from arcade manual DIP table).
  */
 export const SPEED_TO_MPH: Record<SpeedSetting, number> = {
   AVERAGE: 195,
+  DEFAULT: 225,
   HIGH: 244,
 };
 

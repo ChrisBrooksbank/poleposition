@@ -40,6 +40,8 @@ export class GrandPrixState {
    */
   static readonly LAP_BONUS_MS: readonly number[] = [51_000, 57_000, 61_000];
 
+  /** Scales the starting time and lap bonuses for circuits longer or shorter than Fuji. */
+  private _timeScale = 1;
   private _timerMs: number;
   private _elapsed: number = 0;
   private _currentLap: number = 1;
@@ -120,7 +122,7 @@ export class GrandPrixState {
 
       // Intermediate lap: add bonus time and advance lap counter
       const bonusIndex = Math.min(this._currentLap - 1, GrandPrixState.LAP_BONUS_MS.length - 1);
-      this._timerMs += GrandPrixState.LAP_BONUS_MS[bonusIndex];
+      this._timerMs += GrandPrixState.LAP_BONUS_MS[bonusIndex] * this._timeScale;
       this._currentLap++;
       return true;
     }
@@ -134,9 +136,10 @@ export class GrandPrixState {
   }
 
   /** Reset to initial state with the given (or default) lap count. */
-  reset(totalLaps: GPLapCountOption = GrandPrixState.DEFAULT_LAPS): void {
+  reset(totalLaps: GPLapCountOption = GrandPrixState.DEFAULT_LAPS, timeScale = 1): void {
     this._totalLaps = totalLaps;
-    this._timerMs = GrandPrixState.INITIAL_TIMER_MS;
+    this._timeScale = timeScale;
+    this._timerMs = GrandPrixState.INITIAL_TIMER_MS * timeScale;
     this._elapsed = 0;
     this._currentLap = 1;
     this._outcome = GrandPrixOutcome.PENDING;
