@@ -23,14 +23,14 @@ Audit notes (Phase 1): old sim uses screen-pixel units (SteeringPhysics playerX,
 - [x] Road ribbon mesh generator (src/remaster/roadGeometry.ts, RoadMesh.ts): kerbs, edge lines, stripes. Still to do: start line, centre dashes, verify visually in browser
 
 ### Phase 3: Simulation fidelity
-- [ ] Player physics: throttle/brake, low/high gear, speeds, off-road slowdown (research.md 1, 2)
-- [ ] Steering and curve centrifugal push
+- [x] Player physics in metres (src/sim/PlayerCar.ts): throttle/brake, low/high gear, off-road slowdown; values carried over from the old sim, still to tune against the original
+- [x] Steering and curve push (in PlayerCar; tuning constants are first guesses)
 - [ ] Collisions with billboards/cars, explosion and respawn; puddle spin
 - [ ] AI cars: count, speeds, lane behaviour, passing; deterministic and unit-tested
 - [ ] Qualifying, grid position thresholds, Grand Prix laps, timer/bonus time, scoring, high scores
 
 ### Phase 4: 3D presentation
-- [ ] Chase camera matching the original framing; curve-bend effect
+- [ ] Chase camera matching the original framing; curve-bend effect (basic chase camera in src/remaster/main.ts, drivable at remaster.html)
 - [ ] Player and AI car models with wheel/steering animation
 - [ ] Scenery: Mt. Fuji, sky, grass, billboards, posts, gantry, grandstands
 - [ ] Lighting, fog, tone mapping; explosion, smoke, puddle spray effects

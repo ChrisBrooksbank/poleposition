@@ -36,6 +36,18 @@ describe('Track', () => {
     expect(end.y).toBeCloseTo(0.5, 5);
   });
 
+  it('gives poses along the centreline, offset laterally to the driver right', () => {
+    const t = new Track({
+      name: 's',
+      roadWidth: 12,
+      segments: [{ name: 's', length: 100, curvature: 0, slope: 0.1 }],
+    });
+    const p = t.poseAt(51);
+    expect(p.z).toBeCloseTo(51, 5);
+    expect(p.y).toBeCloseTo(5.1, 5);
+    expect(t.poseAt(50, 3).x).toBeCloseTo(-3, 5);
+  });
+
   it('rejects empty or zero-length tracks', () => {
     expect(() => new Track({ ...def, segments: [] })).toThrow();
     expect(

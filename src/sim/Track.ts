@@ -29,9 +29,19 @@ export interface CenterlinePoint {
   heading: number;
 }
 
+export interface Pose {
+  x: number;
+  y: number;
+  z: number;
+  heading: number;
+}
+
+const POSE_STEP = 2;
+
 export class Track {
   readonly length: number;
   private readonly starts: number[] = [];
+  private poseLine: CenterlinePoint[] | null = null;
 
   constructor(readonly def: TrackDef) {
     if (def.segments.length === 0) throw new Error('Track needs at least one segment');
@@ -88,5 +98,26 @@ export class Track {
       y += this.slopeAt(mid) * ds;
     }
     return points;
+  }
+
+  /**
+   * World pose at distance s along the lap, offset laterally by `lateral` metres
+   * (positive = toward the driver's right). Interpolates a cached centreline.
+   */
+  poseAt(s: number, lateral = 0): Pose {
+    this.poseLine ??= this.buildCenterline(POSE_STEP);
+    const line = this.poseLine;
+    const pos = this.wrap(s);
+    const i = Math.min(Math.floor(pos / POSE_STEP), line.length - 2);
+    const a = line[i];
+    const b = line[i + 1];
+    const t = (pos - a.s) / (b.s - a.s || 1);
+    const heading = a.heading + (b.heading - a.heading) * t;
+    return {
+      x: a.x + (b.x - a.x) * t - Math.cos(heading) * lateral,
+      y: a.y + (b.y - a.y) * t,
+      z: a.z + (b.z - a.z) * t - Math.sin(heading) * lateral,
+      heading,
+    };
   }
 }
