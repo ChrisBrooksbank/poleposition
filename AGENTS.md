@@ -32,9 +32,10 @@ npm run check          # Run ALL checks (typecheck + lint + test)
 
 ## Project Notes
 
-- Reference research.md for all original game specifications
-- Target resolution: 256x224 pixels (scaled up for modern displays)
-- Pseudo-3D road rendering via horizontal strips with perspective projection
+- Reference research.md for all original game specifications; the remaster spec is specs/remaster-3d.md
+- 3D world in Three.js (src/remaster/); pure metre-based simulation in src/sim/ (no Three.js imports there)
+- HUD and screens are a 256x224 Canvas 2D overlay on top of the WebGL canvas (4:3 letterboxed)
+- Four courses (src/sim/tracks/); layouts must stay closed and non-crossing (tests/courses.test.ts)
 - Procedural audio synthesis for engine sound (oscillator frequency mapped to speed)
-- All art assets are original (no copyrighted sprites) - see specs for billboard replacements
-- Specs in specs/ directory define JTBD requirements
+- All art assets are original (no copyrighted sprites, fictional sponsors)
+- See CLAUDE.md for architecture and the ?debug play-test hooks

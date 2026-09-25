@@ -115,6 +115,8 @@ export class Game {
   private raceDistance = 0;
   private spinTime = 0;
   private shake = 0;
+  /** Milliseconds of protection left after a respawn, so trailing traffic cannot instantly re-crash us. */
+  private invulnerableMs = 0;
   private prevDistance = 0;
   private prevLateral = 0;
   private prevAi: number[] = [];
@@ -146,6 +148,29 @@ export class Game {
       'position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none';
     this.stage.wrapper.appendChild(this.overlay);
     this.ctx = this.overlay.getContext('2d') as CanvasRenderingContext2D;
+
+    // Optional CRT look (scanlines + vignette), toggled with C and remembered.
+    const crt = document.createElement('div');
+    crt.style.cssText =
+      'position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,0.18) 0px,rgba(0,0,0,0.18) 1px,transparent 1px,transparent 3px),radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.35) 100%)';
+    let crtOn = false;
+    try {
+      crtOn = localStorage.getItem('pp-crt') === '1';
+    } catch {
+      // storage unavailable: default off
+    }
+    crt.style.display = crtOn ? 'block' : 'none';
+    this.stage.wrapper.appendChild(crt);
+    window.addEventListener('keydown', (e) => {
+      if (e.code !== 'KeyC') return;
+      crtOn = !crtOn;
+      crt.style.display = crtOn ? 'block' : 'none';
+      try {
+        localStorage.setItem('pp-crt', crtOn ? '1' : '0');
+      } catch {
+        // storage unavailable: not remembered
+      }
+    });
 
     // Browsers only allow audio after a user gesture.
     const unlock = () => this.audio.resume();
@@ -291,6 +316,7 @@ export class Game {
     this.spinTime = 0;
     this.shake = 0;
     this.showTraffic = true;
+    this.invulnerableMs = 0;
     this.engine.start();
     this.screech.start();
     this.sfx.startGrassRumble();
@@ -324,6 +350,7 @@ export class Game {
         this.car.respawn();
         this.puddleSpin.reset();
         this.spinTime = 0;
+        this.invulnerableMs = 2500;
       }
       this.engine.update(0);
       return;
@@ -354,6 +381,7 @@ export class Game {
     if (nudge !== 0) this.car.lateral += nudge;
 
     // Solid objects: billboards and other cars.
+    this.invulnerableMs = Math.max(0, this.invulnerableMs - dtMs);
     const hitCar = this.ai.all.some((c) =>
       boxesOverlap(
         this.track,
@@ -362,8 +390,8 @@ export class Game {
       )
     );
     if (
-      hitCar ||
-      anyOverlap(this.track, carBox(this.car.distance, this.car.lateral), this.boards)
+      this.invulnerableMs === 0 &&
+      (hitCar || anyOverlap(this.track, carBox(this.car.distance, this.car.lateral), this.boards))
     ) {
       this.crash();
     }
@@ -393,7 +421,7 @@ export class Game {
   private registerStates(): void {
     const m = this.machine;
     const clear = () => this.ctx.clearRect(0, 0, screens.W, screens.H);
-    const hudNow = (timerSeconds: number, lap?: { current: number; total: number }) =>
+    const hudNow = (timerSeconds: number, lap?: { current: number; total: number }) => {
       this.hud.render(this.ctx, {
         score: this.score.score,
         timerSeconds,
@@ -403,6 +431,14 @@ export class Game {
         lapTotal: lap?.total,
         racePosition: this.racePosition(),
       });
+      this.ctx.font = 'bold 8px monospace';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillStyle = '#ffdd00';
+      this.ctx.fillText(`TOP ${String(this.topScore()).padStart(6, '0')}`, screens.W / 2, 12);
+      this.ctx.textAlign = 'right';
+      this.ctx.fillStyle = this.input.gear === 'high' ? '#ff6644' : '#66ddff';
+      this.ctx.fillText(this.input.gear === 'high' ? 'HIGH' : 'LOW', screens.W - 4, screens.H - 8);
+    };
 
     m.register(GameState.ATTRACT, {
       onEnter: () => {
@@ -713,7 +749,9 @@ export class Game {
   private placePlayer(distance: number, lateral: number, exploding: boolean): void {
     const pose = this.track.poseAt(distance, lateral);
     const model = this.playerModel;
-    model.group.visible = !exploding;
+    // Blink while protected after a respawn.
+    const blinkHidden = this.invulnerableMs > 0 && Math.floor(this.invulnerableMs / 120) % 2 === 0;
+    model.group.visible = !exploding && !blinkHidden;
     model.group.position.set(pose.x, pose.y, pose.z);
     const spin = this.puddleSpin.isSpinning
       ? Math.min(1, (this.spinTime * 1000) / SPIN_DURATION_MS) * Math.PI * 2
