@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { HUDRenderer, MPH_TO_KPH } from '../src/renderer/HUDRenderer';
+import { HUDRenderer, MPH_TO_KPH } from '../src/remaster/HUDRenderer';
 
 const LOGICAL_WIDTH = 256;
 const LOGICAL_HEIGHT = 224;

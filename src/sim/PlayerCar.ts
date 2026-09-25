@@ -55,30 +55,32 @@ export class PlayerCar {
   }
 
   step(dt: number, input: CarInput): void {
-    const top = input.gear === 'low' ? this.topSpeedMph / 2 : this.topSpeedMph;
+    let top = input.gear === 'low' ? this.topSpeedMph / 2 : this.topSpeedMph;
+    // Grass caps speed. Excess speed is shed quickly, but the car can still accelerate up to the
+    // cap, so it can drive back onto the road rather than sticking at a standstill.
+    if (this.offRoad) top = Math.min(top, PlayerCar.OFF_ROAD_CAP);
+    const shed = this.offRoad ? PlayerCar.OFF_ROAD_DECEL : PlayerCar.COAST_DECEL;
     let mph = this.speedMph;
 
     if (input.brake) {
       mph = Math.max(0, mph - PlayerCar.BRAKE_DECEL * dt);
     } else if (mph > top) {
-      mph = Math.max(top, mph - PlayerCar.COAST_DECEL * dt);
+      mph = Math.max(top, mph - shed * dt);
     } else if (input.throttle) {
       const accel = input.gear === 'low' ? PlayerCar.LOW_ACCEL : PlayerCar.HIGH_ACCEL;
       mph = Math.min(mph + accel * dt, top);
     } else {
       mph = Math.max(0, mph - PlayerCar.COAST_DECEL * dt);
     }
-
-    if (this.offRoad) {
-      mph = Math.min(Math.max(0, mph - PlayerCar.OFF_ROAD_DECEL * dt), PlayerCar.OFF_ROAD_CAP);
-    }
     this.speed = mph * MPH_TO_MS;
 
+    // Steering authority grows with speed, but a moving car can always steer a little.
     const speedFraction = Math.min(this.speedMph / this.topSpeedMph, 1);
+    const authority = this.speed > 0.5 ? Math.max(speedFraction, 0.3) : 0;
     const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     const push = this.track.curvatureAt(this.distance) * this.speed * PlayerCar.CURVE_PUSH;
     // A right-hand curve (positive curvature) throws the car to the left, and vice versa.
-    this.lateral += (steer * PlayerCar.MAX_STEER_SPEED * speedFraction - push) * dt;
+    this.lateral += (steer * PlayerCar.MAX_STEER_SPEED * authority - push) * dt;
     this.distance += this.speed * dt;
   }
 

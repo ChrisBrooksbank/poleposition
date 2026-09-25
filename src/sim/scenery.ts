@@ -40,7 +40,7 @@ export const TERRAIN_HALF_WIDTH = 60;
 export const BILLBOARD_SPACING = 110;
 export const BILLBOARD_WIDTH = 8;
 export const POST_SPACING = 40;
-export const START_LINE_S = 80;
+export const START_LINE_S = 0;
 
 /** Small deterministic PRNG (mulberry32) so layouts never change between runs. */
 export function seededRandom(seed: number): () => number {

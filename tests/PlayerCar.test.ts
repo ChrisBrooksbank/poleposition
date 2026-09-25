@@ -91,3 +91,21 @@ describe('PlayerCar', () => {
     expect(car.lateral).toBe(0);
   });
 });
+
+describe('PlayerCar off-road recovery', () => {
+  it('can accelerate up to the grass cap from a standstill instead of sticking', () => {
+    const car = new PlayerCar(straight);
+    car.lateral = 12;
+    run(car, { ...idle, throttle: true }, 2);
+    expect(car.speedMph).toBeGreaterThan(20);
+    expect(car.speedMph).toBeLessThanOrEqual(PlayerCar.OFF_ROAD_CAP + 0.001);
+  });
+
+  it('can steer back onto the road from the grass', () => {
+    const car = new PlayerCar(straight);
+    car.lateral = 8;
+    run(car, { ...idle, throttle: true, left: true }, 2);
+    expect(car.lateral).toBeLessThan(6);
+    expect(car.offRoad).toBe(false);
+  });
+});
