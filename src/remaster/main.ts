@@ -19,6 +19,11 @@ const track = new Track(FUJI);
 const car = new PlayerCar(track);
 const input = new InputHandler();
 
+// Debug: ?s=<metres>&v=<m/s> starts the car part-way round the lap.
+const query = new URLSearchParams(location.search);
+car.distance = Number(query.get('s') ?? 0);
+car.speed = Number(query.get('v') ?? 0);
+
 stage.scene.add(new THREE.HemisphereLight(0xffffff, 0x446644, 1.4));
 stage.scene.add(createRoadMesh(track));
 
@@ -41,7 +46,7 @@ hud.style.cssText =
   'position:fixed;top:8px;left:8px;color:#fff;font:16px monospace;text-shadow:1px 1px #000';
 document.body.appendChild(hud);
 
-let prevDistance = 0;
+let prevDistance = car.distance;
 let prevLateral = 0;
 
 function place(distance: number, lateral: number): void {
@@ -50,7 +55,13 @@ function place(distance: number, lateral: number): void {
   carMesh.rotation.y = -pose.heading;
 
   // Camera sits behind the car on the road line and looks down the road ahead.
-  const cam = track.poseAt(distance - CAMERA_BACK, lateral * 0.6);
+  // Step back along the car's heading (not along the lap) so the start line does not wrap.
+  const base = track.poseAt(distance, lateral * 0.6);
+  const cam = {
+    x: base.x + Math.sin(base.heading) * CAMERA_BACK,
+    y: base.y,
+    z: base.z - Math.cos(base.heading) * CAMERA_BACK,
+  };
   const look = track.poseAt(distance + CAMERA_LOOK_AHEAD, lateral * 0.3);
   stage.camera.position.set(cam.x, cam.y + CAMERA_HEIGHT, cam.z);
   stage.camera.lookAt(look.x, look.y + 1, look.z);
