@@ -12,14 +12,14 @@ export function fitAspect(width: number, height: number): { width: number; heigh
 export class Stage {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(60, ASPECT, 0.1, 5000);
+  readonly camera = new THREE.PerspectiveCamera(60, ASPECT, 0.5, 30000);
 
   constructor(host: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.scene.background = new THREE.Color(0x6ab7ff);
-    this.scene.fog = new THREE.Fog(0x6ab7ff, 200, 1800);
+    this.scene.background = new THREE.Color(0xcfe6ff);
+    this.scene.fog = new THREE.Fog(0xcfe6ff, 400, 3500);
     host.appendChild(this.renderer.domElement);
     window.addEventListener('resize', () => this.resize());
     this.resize();

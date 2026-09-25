@@ -31,8 +31,8 @@ Audit notes (Phase 1): old sim uses screen-pixel units (SteeringPhysics playerX,
 
 ### Phase 4: 3D presentation
 - [ ] Chase camera matching the original framing; curve-bend effect (basic chase camera in src/remaster/main.ts, drivable at remaster.html)
-- [ ] Player and AI car models with wheel/steering animation
-- [ ] Scenery: Mt. Fuji, sky, grass, billboards, posts, gantry, grandstands
+- [x] Procedural F1 car model with spinning wheels and steering front wheels (src/remaster/carModel.ts); AI car liveries to do with AI system
+- [x] Scenery: striped terrain, Mt. Fuji + mountain backdrop, sky, trees, posts, sponsor billboards (fictional brands), grandstands, start gantry (src/remaster/scenery.ts, src/sim/scenery.ts). Textures are procedural canvas; refine later
 - [ ] Lighting, fog, tone mapping; explosion, smoke, puddle spray effects
 - [ ] Arcade-style HUD and bitmap font; optional CRT post-process
 

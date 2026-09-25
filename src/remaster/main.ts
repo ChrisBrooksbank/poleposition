@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import { Stage } from './Stage';
 import { createRoadMesh } from './RoadMesh';
+import { createScenery } from './scenery';
+import { createCarModel, animateCar } from './carModel';
 import { FixedStepLoop } from '../sim/FixedStepLoop';
 import { Track } from '../sim/Track';
 import { FUJI } from '../sim/tracks/fuji';
@@ -21,24 +23,20 @@ const input = new InputHandler();
 
 // Debug: ?s=<metres>&v=<m/s> starts the car part-way round the lap.
 const query = new URLSearchParams(location.search);
-car.distance = Number(query.get('s') ?? 0);
+car.distance = Number(query.get('s') ?? 20);
 car.speed = Number(query.get('v') ?? 0);
 
-stage.scene.add(new THREE.HemisphereLight(0xffffff, 0x446644, 1.4));
+stage.scene.add(new THREE.HemisphereLight(0xffffff, 0x557755, 1.5));
+const sun = new THREE.DirectionalLight(0xfff2d8, 1.6);
+sun.position.set(-300, 500, -200);
+stage.scene.add(sun);
 stage.scene.add(createRoadMesh(track));
 
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(20000, 20000),
-  new THREE.MeshLambertMaterial({ color: 0x2f8f3a })
-);
-ground.rotation.x = -Math.PI / 2;
-ground.position.y = -0.3;
-stage.scene.add(ground);
+const scenery = createScenery(track);
+stage.scene.add(scenery.group);
 
-const carMesh = new THREE.Mesh(
-  new THREE.BoxGeometry(1.8, 0.8, 4),
-  new THREE.MeshLambertMaterial({ color: 0xd22020 })
-);
+const carModel = createCarModel({ body: 0xd22020, accent: 0xf5f5f5 });
+const carMesh = carModel.group;
 stage.scene.add(carMesh);
 
 const hud = document.createElement('div');
@@ -51,8 +49,9 @@ let prevLateral = 0;
 
 function place(distance: number, lateral: number): void {
   const pose = track.poseAt(distance, lateral);
-  carMesh.position.set(pose.x, pose.y + 0.4, pose.z);
+  carMesh.position.set(pose.x, pose.y, pose.z);
   carMesh.rotation.y = -pose.heading;
+  animateCar(carModel, distance, (input.right ? 1 : 0) - (input.left ? 1 : 0));
 
   // Camera sits behind the car on the road line and looks down the road ahead.
   // Step back along the car's heading (not along the lap) so the start line does not wrap.
@@ -65,6 +64,7 @@ function place(distance: number, lateral: number): void {
   const look = track.poseAt(distance + CAMERA_LOOK_AHEAD, lateral * 0.3);
   stage.camera.position.set(cam.x, cam.y + CAMERA_HEIGHT, cam.z);
   stage.camera.lookAt(look.x, look.y + 1, look.z);
+  scenery.update(stage.camera.position);
 }
 
 new FixedStepLoop(
