@@ -56,6 +56,12 @@ export function computeGridPosition(lapTimeSeconds: number): number {
 }
 
 export class QualifyingState {
+  /**
+   * Multiplies the lap time before grid thresholds are applied, so shorter or longer circuits
+   * are judged against the arcade's Fuji-length thresholds proportionally.
+   */
+  private _timeScale = 1;
+
   /** Duration (ms) for which the "QUALIFYING START" banner is displayed. */
   static readonly ANNOUNCE_DURATION_MS = 3000;
   /** Default countdown timer duration (seconds). */
@@ -132,7 +138,7 @@ export class QualifyingState {
     if (playerZ >= trackLength) {
       const lapTimeSecs = this._elapsed / 1000;
       this._lapTimeSecs = lapTimeSecs;
-      this._gridPosition = computeGridPosition(lapTimeSecs);
+      this._gridPosition = computeGridPosition(lapTimeSecs * this._timeScale);
       this._outcome = QualifyingOutcome.QUALIFIED;
       return;
     }
@@ -144,7 +150,11 @@ export class QualifyingState {
   }
 
   /** Reset to initial state with the given (or default) time limit. */
-  reset(timeLimitSeconds: QualifyingTimerOption = QualifyingState.DEFAULT_TIMER_S): void {
+  reset(
+    timeLimitSeconds: QualifyingTimerOption = QualifyingState.DEFAULT_TIMER_S,
+    timeScale = 1
+  ): void {
+    this._timeScale = timeScale;
     this._timerMs = timeLimitSeconds * 1000;
     this._elapsed = 0;
     this._outcome = QualifyingOutcome.PENDING;

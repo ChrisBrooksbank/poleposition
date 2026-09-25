@@ -8,12 +8,13 @@ import { Explosion, createPuddleMeshes } from './effects';
 import * as screens from './screens';
 import { FixedStepLoop } from '../sim/FixedStepLoop';
 import { Track } from '../sim/Track';
-import { FUJI } from '../sim/tracks/fuji';
+import { COURSES, REFERENCE_LAP_LENGTH, type Course } from '../sim/courses';
+import { THEMES } from './themes';
 import { PlayerCar, MPH_TO_MS } from '../sim/PlayerCar';
 import { AIField, AI_COUNT, gridSlot } from '../sim/AIField';
 import { buildSceneryLayout } from '../sim/scenery';
 import {
-  FUJI_PUDDLES,
+  type Box,
   billboardBoxes,
   boxesOverlap,
   anyOverlap,
@@ -41,6 +42,7 @@ import { TireScreech } from '../audio/TireScreech';
 import { CollisionSound } from '../audio/CollisionSound';
 import { DiscreteSFX } from '../audio/DiscreteSFX';
 import { VoiceAnnouncements } from '../audio/VoiceAnnouncements';
+import { ChiptuneMusic, type MusicTrack } from '../audio/ChiptuneMusic';
 
 const CAMERA_BACK = 7;
 const CAMERA_HEIGHT = 2.6;
@@ -56,20 +58,31 @@ const AI_PALETTES = [
   { body: 0x8b2fc9, accent: 0xffd400 },
 ];
 
+/** Everything in the 3D world that belongs to one course, built on first use and then reused. */
+interface CourseView {
+  track: Track;
+  group: THREE.Group;
+  scenery: Scenery;
+  boards: Box[];
+  puddleBoxes: Box[];
+}
+
 export class Game {
   private readonly stage: Stage;
   private readonly overlay: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
-  private readonly track = new Track(FUJI);
-  private readonly car = new PlayerCar(this.track);
-  private readonly ai = new AIField(this.track);
+  private track!: Track;
+  private car!: PlayerCar;
+  private ai!: AIField;
+  private boards!: Box[];
+  private puddleBoxes!: Box[];
+  private scenery!: Scenery;
+  private courseIndex = 0;
+  private readonly courseViews = new Map<number, CourseView>();
   private readonly input = new InputHandler();
   private readonly dip = new DIPSwitchSettings();
   private readonly dipPanel = new DIPSwitchPanel(this.dip);
-  private readonly boards = billboardBoxes(buildSceneryLayout(this.track));
-  private readonly puddleBoxes = FUJI_PUDDLES.map(puddleBox);
 
-  private readonly scenery: Scenery;
   private readonly playerModel: CarModel;
   private readonly aiModels: CarModel[] = [];
   private readonly explosionFx = new Explosion();
@@ -93,6 +106,7 @@ export class Game {
   private readonly crashSound = new CollisionSound(this.audio);
   private readonly sfx = new DiscreteSFX(this.audio);
   private readonly voice = new VoiceAnnouncements(this.audio);
+  private readonly music = new ChiptuneMusic(this.audio);
 
   // Simulation bookkeeping.
   private stateElapsed = 0;
@@ -115,11 +129,6 @@ export class Game {
     const sun = new THREE.DirectionalLight(0xfff2d8, 1.6);
     sun.position.set(-300, 500, -200);
     scene.add(sun);
-    scene.add(createRoadMesh(this.track));
-    this.scenery = createScenery(this.track);
-    scene.add(this.scenery.group);
-    scene.add(createPuddleMeshes(this.track, FUJI_PUDDLES));
-
     this.playerModel = createCarModel({ body: 0xd22020, accent: 0xf5f5f5 });
     scene.add(this.playerModel.group);
     for (let i = 0; i < AI_COUNT; i++) {
@@ -147,11 +156,51 @@ export class Game {
     window.addEventListener('pointerdown', unlock);
 
     this.registerStates();
+    this.activateCourse(0);
     this.resetPositions(0);
     // Test hook: ?debug exposes the game so automated play-tests can jump between states.
     if (new URLSearchParams(location.search).has('debug')) {
       (window as unknown as { __game: Game }).__game = this;
     }
+  }
+
+  /** Builds (once) and shows a course, and points the sim at its track and hazards. */
+  private activateCourse(index: number): void {
+    this.courseIndex = (index + COURSES.length) % COURSES.length;
+    let view = this.courseViews.get(this.courseIndex);
+    const course: Course = COURSES[this.courseIndex];
+    if (!view) {
+      const track = new Track(course.def);
+      const group = new THREE.Group();
+      group.add(createRoadMesh(track));
+      const scenery = createScenery(track, THEMES[course.id]);
+      group.add(scenery.group);
+      group.add(createPuddleMeshes(track, course.puddles));
+      this.stage.scene.add(group);
+      view = {
+        track,
+        group,
+        scenery,
+        boards: billboardBoxes(buildSceneryLayout(track)),
+        puddleBoxes: course.puddles.map(puddleBox),
+      };
+      this.courseViews.set(this.courseIndex, view);
+    }
+    for (const v of this.courseViews.values()) v.group.visible = v === view;
+    this.track = view.track;
+    this.scenery = view.scenery;
+    this.boards = view.boards;
+    this.puddleBoxes = view.puddleBoxes;
+    this.stage.setAtmosphere(view.scenery.haze, view.scenery.fogFar);
+    this.car = new PlayerCar(this.track, this.dip.topSpeedMph);
+    this.ai = new AIField(this.track);
+    this.snapshot();
+  }
+
+  private changeCourse(step: number): void {
+    this.activateCourse(this.courseIndex + step);
+    this.resetPositions(0);
+    this.sfx.triggerCountdownBeep();
   }
 
   private togglePause(): void {
@@ -167,6 +216,12 @@ export class Game {
   /** Jump straight to a state (used by automated play-tests). */
   debugGoto(state: GameState): void {
     this.machine.transition(state);
+  }
+
+  /** Switch course (used by automated play-tests). */
+  debugCourse(index: number): void {
+    this.activateCourse(index);
+    this.resetPositions(0);
   }
 
   /** Put the player somewhere specific (used by automated play-tests). */
@@ -206,6 +261,7 @@ export class Game {
     if (this.paused) return;
     this.snapshot();
     this.machine.update(dt * 1000);
+    this.music.update();
   }
 
   private snapshot(): void {
@@ -227,7 +283,7 @@ export class Game {
   }
 
   private beginRun(distance: number): void {
-    this.car.respawn();
+    this.car = new PlayerCar(this.track, this.dip.topSpeedMph);
     this.car.distance = distance;
     this.raceDistance = distance;
     this.explosionState.update(1e9);
@@ -353,6 +409,7 @@ export class Game {
         this.stateElapsed = 0;
         this.attract.reset();
         this.showTraffic = false;
+        this.activateCourse(0);
         this.resetPositions(0);
       },
       update: (dt) => {
@@ -394,7 +451,7 @@ export class Game {
       },
       update: (dt) => {
         this.stateElapsed += dt;
-        if (this.stateElapsed > 1500) m.transition(GameState.QUALIFYING);
+        if (this.stateElapsed > 1500) m.transition(GameState.COURSE_SELECT);
       },
       render: (ctx) => {
         clear();
@@ -402,11 +459,44 @@ export class Game {
       },
     });
 
+    let selectLeft = false;
+    let selectRight = false;
+    m.register(GameState.COURSE_SELECT, {
+      onEnter: () => {
+        this.stateElapsed = 0;
+        selectLeft = this.input.left;
+        selectRight = this.input.right;
+      },
+      update: (dt) => {
+        this.stateElapsed += dt;
+        const left = this.input.left;
+        const right = this.input.right;
+        if (left && !selectLeft) this.changeCourse(-1);
+        if (right && !selectRight) this.changeCourse(1);
+        selectLeft = left;
+        selectRight = right;
+        // Enter/Space confirm (throttle would too easily confirm by accident while steering).
+        if ((this.stateElapsed > 300 && this.confirmPressed) || this.stateElapsed > 15000) {
+          m.transition(GameState.QUALIFYING);
+        }
+      },
+      render: (ctx) => {
+        clear();
+        screens.drawCourseSelect(
+          ctx,
+          COURSES.map((c) => c.name),
+          this.courseIndex,
+          this.track.length,
+          this.stateElapsed
+        );
+      },
+    });
+
     m.register(GameState.QUALIFYING, {
       onEnter: () => {
         this.score.reset();
         this.ai.startQualifying();
-        this.qualifying.reset(this.dip.qualifyingTime);
+        this.qualifying.reset(this.dip.qualifyingTime, REFERENCE_LAP_LENGTH / this.track.length);
         this.beginRun(0);
         this.sfx.triggerQualifyingFanfare();
         this.voice.triggerQualifyingStart();
@@ -527,7 +617,9 @@ export class Game {
     m.register(GameState.GAME_OVER, {
       onEnter: () => {
         this.stateElapsed = 0;
+        this.music.play('game_over');
       },
+      onExit: () => this.music.stop(),
       update: (dt) => {
         this.stateElapsed += dt;
         if (this.stateElapsed > 3000) m.transition(GameState.ATTRACT);
@@ -539,7 +631,12 @@ export class Game {
       onEnter: () => {
         this.nameEntry.reset();
         this.stateElapsed = 0;
+        // The jingle reflects where this score would rank.
+        const rank = 1 + this.highScores.entries.filter((e) => e.score >= this.score.score).length;
+        const tiers: MusicTrack[] = ['name_entry_1st', 'name_entry_top6', 'name_entry_standard'];
+        this.music.play(tiers[HighScoreManager.rankingTier(rank) - 1]);
       },
+      onExit: () => this.music.stop(),
       update: (dt) => {
         this.stateElapsed += dt;
         if (!this.nameEntry.isDone) {

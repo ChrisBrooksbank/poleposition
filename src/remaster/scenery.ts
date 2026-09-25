@@ -4,10 +4,7 @@ import * as THREE from 'three';
 import type { Track } from '../sim/Track';
 import { buildSceneryLayout, groundHeight, seededRandom, type SceneryItem } from '../sim/scenery';
 import { buildTerrainArrays } from './terrainGeometry';
-
-export const HAZE = 0xcfe6ff;
-const SKY_ZENITH = new THREE.Color(0x2f7fe0);
-const SKY_HORIZON = new THREE.Color(HAZE);
+import type { Theme } from './themes';
 
 export interface Scenery {
   group: THREE.Group;
@@ -15,6 +12,9 @@ export interface Scenery {
   update(camera: THREE.Vector3): void;
   /** Height of the flat ground plane. */
   planeY: number;
+  /** Horizon colour and fog distance for this course. */
+  haze: number;
+  fogFar: number;
 }
 
 function canvasTexture(
@@ -103,14 +103,16 @@ function gantryBanner(): THREE.CanvasTexture {
   });
 }
 
-function createSky(): THREE.Mesh {
+function createSky(theme: Theme): THREE.Mesh {
+  const zenith = new THREE.Color(theme.skyZenith);
+  const horizon = new THREE.Color(theme.haze);
   const geo = new THREE.SphereGeometry(25000, 24, 16);
   const pos = geo.getAttribute('position');
   const colors = new Float32Array(pos.count * 3);
   const c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const t = Math.max(0, Math.min(1, pos.getY(i) / 25000));
-    c.copy(SKY_HORIZON).lerp(SKY_ZENITH, Math.pow(t, 0.6));
+    c.copy(horizon).lerp(zenith, Math.pow(t, 0.6));
     colors.set([c.r, c.g, c.b], i * 3);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -133,17 +135,20 @@ function createMountain(
   topRadius: number,
   height: number,
   snowLine: number,
-  seed: number
+  seed: number,
+  theme: Theme
 ): THREE.Mesh {
+  const horizon = new THREE.Color(theme.haze);
   const geo = new THREE.CylinderGeometry(topRadius, radius, height, 48, 14, true);
   const pos = geo.getAttribute('position');
   const rand = seededRandom(seed);
   const phase = rand() * 6;
   const colors = new Float32Array(pos.count * 3);
   const c = new THREE.Color();
-  const rock = new THREE.Color(0x4c5f86);
-  const forest = new THREE.Color(0x3d6a55);
-  const snow = new THREE.Color(0xf4f8ff);
+  const [forestHex, rockHex, snowHex] = theme.hills;
+  const rock = new THREE.Color(rockHex);
+  const forest = new THREE.Color(forestHex);
+  const snow = new THREE.Color(snowHex);
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
@@ -157,7 +162,7 @@ function createMountain(
       .lerp(snow, snowMix);
     const shade = 0.8 + 0.2 * Math.cos(angle - 0.8);
     c.multiplyScalar(shade);
-    c.lerp(SKY_HORIZON, 1 - THREE.MathUtils.smoothstep(t, 0, 0.35));
+    c.lerp(horizon, 1 - THREE.MathUtils.smoothstep(t, 0, 0.35));
     colors.set([c.r, c.g, c.b], i * 3);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -167,17 +172,19 @@ function createMountain(
   );
 }
 
-function createBackdrop(): THREE.Group {
+function createBackdrop(theme: Theme): THREE.Group {
   const group = new THREE.Group();
-  const fuji = createMountain(3800, 220, 1800, 0.55, 3);
-  fuji.position.set(-6500, 900, 7200);
-  group.add(fuji);
+  if (theme.backdrop === 'fuji') {
+    const fuji = createMountain(3800, 220, 1800, 0.55, 3, theme);
+    fuji.position.set(-6500, 900, 7200);
+    group.add(fuji);
+  }
   const rand = seededRandom(9);
   for (let i = 0; i < 16; i++) {
     const angle = (i / 16) * Math.PI * 2 + rand() * 0.3;
     const dist = 9000 + rand() * 3000;
     const h = 500 + rand() * 700;
-    const m = createMountain(1200 + rand() * 1400, 60, h, 0.9, 20 + i);
+    const m = createMountain(1200 + rand() * 1400, 60, h, 0.98, 20 + i, theme);
     m.position.set(Math.sin(angle) * dist, h / 2, Math.cos(angle) * dist);
     group.add(m);
   }
@@ -191,14 +198,14 @@ function facingRoad(heading: number, lateral: number): number {
     : Math.atan2(-Math.cos(heading), -Math.sin(heading));
 }
 
-export function createScenery(track: Track): Scenery {
+export function createScenery(track: Track, theme: Theme): Scenery {
   const group = new THREE.Group();
   const width = track.def.roadWidth;
   const centre = track.buildCenterline(4);
   const planeY = Math.min(...centre.map((p) => p.y)) - 6;
 
   // Terrain ribbon and the flat ground beyond it.
-  const { positions, colors, indices } = buildTerrainArrays(centre, width, planeY);
+  const { positions, colors, indices } = buildTerrainArrays(centre, width, planeY, theme);
   const terrainGeo = new THREE.BufferGeometry();
   terrainGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -208,13 +215,13 @@ export function createScenery(track: Track): Scenery {
 
   const farGround = new THREE.Mesh(
     new THREE.PlaneGeometry(60000, 60000),
-    new THREE.MeshLambertMaterial({ color: 0x2f8a3a })
+    new THREE.MeshLambertMaterial({ color: theme.farGround })
   );
   farGround.rotation.x = -Math.PI / 2;
   group.add(farGround);
 
-  const sky = createSky();
-  const backdrop = createBackdrop();
+  const sky = createSky(theme);
+  const backdrop = createBackdrop(theme);
   group.add(sky, backdrop);
 
   const items = buildSceneryLayout(track);
@@ -225,14 +232,35 @@ export function createScenery(track: Track): Scenery {
   };
 
   // Trees (instanced).
-  const trees = items.filter((i) => i.kind === 'tree');
+  // Thin the layout to this theme's density with a stable hash, so a course always looks the same.
+  const keep = Math.min(1, theme.treeDensity / 0.65);
+  const trees = items
+    .filter((i) => i.kind === 'tree')
+    .filter((_, idx) => (Math.imul(idx + 1, 2654435761) >>> 0) / 4294967296 < keep);
+  const treeShape = {
+    pine: {
+      crown: new THREE.ConeGeometry(2.2, 7, 8).translate(0, 5.5, 0),
+      trunk: new THREE.CylinderGeometry(0.3, 0.4, 2.5, 6).translate(0, 1.25, 0),
+      hue: 0.3,
+    },
+    round: {
+      crown: new THREE.IcosahedronGeometry(2.6, 1).scale(1, 0.85, 1).translate(0, 5.2, 0),
+      trunk: new THREE.CylinderGeometry(0.3, 0.42, 3.4, 6).translate(0, 1.7, 0),
+      hue: 0.27,
+    },
+    palm: {
+      crown: new THREE.ConeGeometry(3.4, 1.1, 7).translate(0, 8.6, 0),
+      trunk: new THREE.CylinderGeometry(0.2, 0.32, 8.2, 6).translate(0, 4.1, 0),
+      hue: 0.2,
+    },
+  }[theme.trees];
   const foliage = new THREE.InstancedMesh(
-    new THREE.ConeGeometry(2.2, 7, 8).translate(0, 5.5, 0),
+    treeShape.crown,
     new THREE.MeshLambertMaterial({ color: 0xffffff }),
     trees.length
   );
   const trunks = new THREE.InstancedMesh(
-    new THREE.CylinderGeometry(0.3, 0.4, 2.5, 6).translate(0, 1.25, 0),
+    treeShape.trunk,
     new THREE.MeshLambertMaterial({ color: 0x5b3a1e }),
     trees.length
   );
@@ -243,7 +271,7 @@ export function createScenery(track: Track): Scenery {
     m.makeScale(t.scale ?? 1, t.scale ?? 1, t.scale ?? 1).setPosition(pose.x, y, pose.z);
     foliage.setMatrixAt(i, m);
     trunks.setMatrixAt(i, m);
-    tint.setHSL(0.3 + ((i * 37) % 10) * 0.005, 0.5, 0.2 + ((i * 13) % 10) * 0.012);
+    tint.setHSL(treeShape.hue + ((i * 37) % 10) * 0.005, 0.5, 0.2 + ((i * 13) % 10) * 0.012);
     foliage.setColorAt(i, tint);
   });
   group.add(foliage, trunks);
@@ -351,6 +379,8 @@ export function createScenery(track: Track): Scenery {
   return {
     group,
     planeY,
+    haze: theme.haze,
+    fogFar: theme.fogFar,
     update(camera) {
       sky.position.copy(camera);
       backdrop.position.set(camera.x, planeY - 40, camera.z);

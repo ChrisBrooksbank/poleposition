@@ -4,6 +4,7 @@
  * States:
  *   ATTRACT      — idle demo/title screen shown while no game is active
  *   COIN_INSERT  — credit screen shown after player starts
+ *   COURSE_SELECT — choose which circuit to race
  *   QUALIFYING   — timed single lap to earn a grid position
  *   GRID_DISPLAY — show earned starting position after qualifying
  *   GRAND_PRIX   — multi-lap race with countdown timer
@@ -25,6 +26,7 @@
 export enum GameState {
   ATTRACT = 'ATTRACT',
   COIN_INSERT = 'COIN_INSERT',
+  COURSE_SELECT = 'COURSE_SELECT',
   QUALIFYING = 'QUALIFYING',
   GRID_DISPLAY = 'GRID_DISPLAY',
   GRAND_PRIX = 'GRAND_PRIX',

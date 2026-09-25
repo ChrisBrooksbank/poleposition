@@ -12,15 +12,29 @@ export interface TerrainArrays {
 /** Length in metres of one light/dark grass stripe, as in the arcade's alternating verges. */
 export const GRASS_STRIPE = 12;
 
-const GRASS_A: [number, number, number] = [0.2, 0.55, 0.22];
-const GRASS_B: [number, number, number] = [0.17, 0.49, 0.2];
-const VERGE_A: [number, number, number] = [0.35, 0.6, 0.27];
-const VERGE_B: [number, number, number] = [0.3, 0.55, 0.25];
+type RGB = readonly [number, number, number];
+
+export interface TerrainPalette {
+  grass: readonly [RGB, RGB];
+  verge: readonly [RGB, RGB];
+}
+
+export const DEFAULT_PALETTE: TerrainPalette = {
+  grass: [
+    [0.2, 0.55, 0.22],
+    [0.17, 0.49, 0.2],
+  ],
+  verge: [
+    [0.35, 0.6, 0.27],
+    [0.3, 0.55, 0.25],
+  ],
+};
 
 export function buildTerrainArrays(
   points: CenterlinePoint[],
   roadWidth: number,
-  planeY: number
+  planeY: number,
+  palette: TerrainPalette = DEFAULT_PALETTE
 ): TerrainArrays {
   const edge = roadWidth / 2 + KERB_WIDTH;
   const flatEnd = edge + VERGE_WIDTH;
@@ -44,7 +58,8 @@ export function buildTerrainArrays(
     const b = points[i + 1];
     const stripe = Math.floor(a.s / GRASS_STRIPE) % 2 === 0;
     for (const [from, to, verge] of spans) {
-      const c = verge ? (stripe ? VERGE_A : VERGE_B) : stripe ? GRASS_A : GRASS_B;
+      const pair = verge ? palette.verge : palette.grass;
+      const c = stripe ? pair[0] : pair[1];
       const base = v / 3;
       const corners: Array<[CenterlinePoint, number]> = [
         [a, from],

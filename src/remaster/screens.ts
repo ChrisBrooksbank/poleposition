@@ -144,3 +144,23 @@ export function drawHighScores(
   });
   if (entries.length === 0) text(ctx, 'NO SCORES YET', W / 2, H / 2, '8px monospace', '#aaaaaa');
 }
+
+export function drawCourseSelect(
+  ctx: CanvasRenderingContext2D,
+  names: readonly string[],
+  index: number,
+  lapLength: number,
+  elapsed: number
+): void {
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, W, 64);
+  ctx.fillRect(0, H - 40, W, 40);
+  text(ctx, 'SELECT COURSE', W / 2, 20, 'bold 11px monospace', '#ffdd00');
+  text(ctx, `< ${names[index]} >`, W / 2, 42, 'bold 10px monospace', '#ffffff');
+  text(ctx, `${(lapLength / 1000).toFixed(2)} KM PER LAP`, W / 2, 56, '6px monospace', '#cccccc');
+  names.forEach((_, i) => {
+    ctx.fillStyle = i === index ? '#ffdd00' : '#666666';
+    ctx.fillRect(W / 2 - names.length * 6 + i * 12, H - 30, 8, 3);
+  });
+  if (blink(elapsed)) text(ctx, 'ENTER TO RACE', W / 2, H - 14, 'bold 8px monospace', '#ffffff');
+}

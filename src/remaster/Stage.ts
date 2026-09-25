@@ -40,6 +40,12 @@ export class Stage {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Sets the horizon colour used for the background and distance fog. */
+  setAtmosphere(haze: number, fogFar: number): void {
+    this.scene.background = new THREE.Color(haze);
+    this.scene.fog = new THREE.Fog(haze, 400, fogFar);
+  }
+
   render(): void {
     this.renderer.render(this.scene, this.camera);
   }

@@ -20,8 +20,8 @@ interface AIConfig {
   speedMph: number;
   lane: number;
   variant: number;
-  /** Where the car sits in qualifying (metres along the lap). */
-  qualifyingS: number;
+  /** Where the car sits in qualifying, as a fraction of the lap. */
+  qualifyingFrac: number;
   weaveAmplitude: number;
   weaveHz: number;
 }
@@ -35,13 +35,55 @@ const LAUNCH_ACCEL = 14;
 
 /** Speeds sit below the player's 225 mph top so a good driver can pass everyone. */
 const CONFIGS: readonly AIConfig[] = [
-  { speedMph: 180, lane: -3.2, variant: 0, qualifyingS: 500, weaveAmplitude: 0.5, weaveHz: 0.3 },
-  { speedMph: 170, lane: 3.2, variant: 1, qualifyingS: 800, weaveAmplitude: 0.4, weaveHz: 0.25 },
-  { speedMph: 160, lane: -1.8, variant: 2, qualifyingS: 1200, weaveAmplitude: 0.6, weaveHz: 0.2 },
-  { speedMph: 185, lane: 1.8, variant: 3, qualifyingS: 1600, weaveAmplitude: 0.35, weaveHz: 0.35 },
-  { speedMph: 175, lane: 0, variant: 0, qualifyingS: 2200, weaveAmplitude: 0.7, weaveHz: 0.22 },
-  { speedMph: 165, lane: 4.2, variant: 1, qualifyingS: 2800, weaveAmplitude: 0.45, weaveHz: 0.28 },
-  { speedMph: 155, lane: -4.2, variant: 2, qualifyingS: 3400, weaveAmplitude: 0.55, weaveHz: 0.18 },
+  {
+    speedMph: 180,
+    lane: -3.2,
+    variant: 0,
+    qualifyingFrac: 0.115,
+    weaveAmplitude: 0.5,
+    weaveHz: 0.3,
+  },
+  {
+    speedMph: 170,
+    lane: 3.2,
+    variant: 1,
+    qualifyingFrac: 0.183,
+    weaveAmplitude: 0.4,
+    weaveHz: 0.25,
+  },
+  {
+    speedMph: 160,
+    lane: -1.8,
+    variant: 2,
+    qualifyingFrac: 0.275,
+    weaveAmplitude: 0.6,
+    weaveHz: 0.2,
+  },
+  {
+    speedMph: 185,
+    lane: 1.8,
+    variant: 3,
+    qualifyingFrac: 0.367,
+    weaveAmplitude: 0.35,
+    weaveHz: 0.35,
+  },
+  { speedMph: 175, lane: 0, variant: 0, qualifyingFrac: 0.505, weaveAmplitude: 0.7, weaveHz: 0.22 },
+  {
+    speedMph: 165,
+    lane: 4.2,
+    variant: 1,
+    qualifyingFrac: 0.642,
+    weaveAmplitude: 0.45,
+    weaveHz: 0.28,
+  },
+  {
+    speedMph: 155,
+    lane: -4.2,
+    variant: 2,
+    qualifyingFrac: 0.78,
+    weaveAmplitude: 0.55,
+    weaveHz: 0.18,
+  },
 ];
 
 /** Start-grid slot (0 = pole) to a lap distance (behind the line) and lateral offset. */
@@ -75,7 +117,7 @@ export class AIField {
     this.time = 0;
     this.launching = false;
     this.cars = CONFIGS.map((c) => ({
-      distance: c.qualifyingS,
+      distance: c.qualifyingFrac * this.track.length,
       lateral: c.lane,
       speed: c.speedMph * MPH_TO_MS,
       variant: c.variant,

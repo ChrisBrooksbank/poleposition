@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Track } from '../src/sim/Track';
+import { COURSES, REFERENCE_LAP_LENGTH } from '../src/sim/courses';
 import { FUJI } from '../src/sim/tracks/fuji';
 import { PlayerCar, MPH_TO_MS, type CarInput } from '../src/sim/PlayerCar';
 import { computeGridPosition } from '../src/state/QualifyingState';
@@ -69,5 +70,15 @@ describe('drivability', () => {
       if (car.offRoad) off = true;
     }
     expect(off).toBe(true);
+  });
+});
+
+describe.each(COURSES.map((c) => [c.name, c] as const))('%s drivability', (_name, course) => {
+  const track = new Track(course.def);
+
+  it('a competent driver stays on the road and qualifies against the scaled thresholds', () => {
+    const { time, offRoadTime } = driveLap(track);
+    expect(offRoadTime).toBeLessThan(4);
+    expect(computeGridPosition(time * (REFERENCE_LAP_LENGTH / track.length))).toBeGreaterThan(0);
   });
 });
