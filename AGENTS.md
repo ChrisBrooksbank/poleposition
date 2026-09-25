@@ -4,7 +4,7 @@ Keep this file under 60 lines. It's loaded every iteration.
 
 ## Tech Stack
 
-- **Renderer**: Three.js (WebGL)
+- **Renderer**: Three.js (WebGL), true 3D remaster (see specs/remaster-3d.md)
 - **Language**: TypeScript
 - **Audio**: Web Audio API (procedural synthesis)
 - **Build**: Vite
