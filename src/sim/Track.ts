@@ -17,6 +17,11 @@ export interface TrackDef {
   /** Road width in metres. */
   roadWidth: number;
   segments: readonly TrackSegment[];
+  /**
+   * The lap is designed to close on itself. Integration error (a few metres) is removed by
+   * spreading a linear correction along the lap so the seam at the start line is continuous.
+   */
+  closed?: boolean;
 }
 
 export interface CenterlinePoint {
@@ -102,6 +107,15 @@ export class Track {
         z += Math.cos(midHeading) * sub;
         y += this.slopeAt(mid) * sub;
         heading += curvature * sub;
+      }
+    }
+    if (this.def.closed) {
+      const end = points[points.length - 1];
+      for (const p of points) {
+        const t = p.s / this.length;
+        p.x -= end.x * t;
+        p.y -= end.y * t;
+        p.z -= end.z * t;
       }
     }
     return points;

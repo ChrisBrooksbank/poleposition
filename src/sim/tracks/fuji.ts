@@ -2,7 +2,7 @@
 // Order: main straight, sharp right, quick left, medium right, left hairpin, long gradual right.
 // Layout was solved numerically so the lap closes on itself (heading and position) and never crosses
 // itself: the turn angles sum to +360 degrees and the centreline returns to the start line.
-// A short straight and a closing right-hander were added after the long right to make it close.
+// A back straight and a closing right-hander were added after the long right to make it close.
 
 import type { TrackDef, TrackSegment } from '../Track';
 
@@ -14,13 +14,13 @@ function seg(name: string, length: number, turnDeg: number, slope = 0): TrackSeg
 }
 
 const CLIMBS: Array<[string, number, number, number]> = [
-  ['Sharp Right', 291.001, 163.756, 0.012],
-  ['Quick Left', 274.628, -21.175, -0.01],
-  ['Medium Right', 263.08, 53.833, 0.015],
-  ['Left Hairpin', 331.967, -101.386, -0.02],
-  ['Long Gradual Right', 873.581, 141.535, 0.004],
-  ['Back Straight', 453.578, 0, 0],
-  ['Final Right', 441.516, 123.437, -0.003],
+  ['Sharp Right', 356.758, 110.641, 0.012],
+  ['Quick Left', 146.27, -29.367, -0.01],
+  ['Medium Right', 503.274, 143.985, 0.015],
+  ['Left Hairpin', 210.451, -127.587, -0.02],
+  ['Long Gradual Right', 531.049, 101.449, 0.004],
+  ['Back Straight', 506.723, 0, 0],
+  ['Final Right', 1005.401, 160.879, -0.003],
 ];
 
 const MAIN_STRAIGHT_LENGTH = 4360 - CLIMBS.reduce((sum, c) => sum + c[1], 0);
@@ -30,6 +30,7 @@ const MAIN_STRAIGHT_SLOPE = -CLIMBS.reduce((sum, c) => sum + c[1] * c[3], 0) / M
 export const FUJI: TrackDef = {
   name: 'Fuji Speedway',
   roadWidth: 14,
+  closed: true,
   segments: [
     seg('Main Straight', MAIN_STRAIGHT_LENGTH, 0, MAIN_STRAIGHT_SLOPE),
     ...CLIMBS.map(([name, length, turn, slope]) => seg(name, length, turn, slope)),

@@ -25,9 +25,15 @@ export class PlayerCar {
   static readonly OFF_ROAD_CAP = 30;
   static readonly OFF_ROAD_DECEL = 120;
   /** Lateral steering speed (m/s) at top speed. */
-  static readonly MAX_STEER_SPEED = 9;
-  /** Outward drift (m/s) per m/s of forward speed per unit curvature (1/m). */
-  static readonly CURVE_PUSH = 10;
+  static readonly MAX_STEER_SPEED = 12;
+  /** Fraction of full steering authority available at low speed. */
+  static readonly MIN_STEER_AUTHORITY = 0.35;
+  /**
+   * Outward drift (m/s) = CURVE_PUSH x curvature (1/m) x speed^2 (m/s), a grip-limited model:
+   * corners barely matter at low speed but push hard at high speed. Tuned so the left hairpin
+   * needs ~100 mph, the sharp/medium rights ~160 mph, and the long curves can be taken flat out.
+   */
+  static readonly CURVE_PUSH = 0.35;
 
   /** Distance along the lap in metres (unwrapped; increases every lap). */
   distance = 0;
@@ -74,11 +80,15 @@ export class PlayerCar {
     }
     this.speed = mph * MPH_TO_MS;
 
-    // Steering authority grows with speed, but a moving car can always steer a little.
     const speedFraction = Math.min(this.speedMph / this.topSpeedMph, 1);
-    const authority = this.speed > 0.5 ? Math.max(speedFraction, 0.3) : 0;
+    // Steering authority grows with speed, but a moving car can always steer a little.
+    const authority =
+      this.speed > 0.5
+        ? PlayerCar.MIN_STEER_AUTHORITY + (1 - PlayerCar.MIN_STEER_AUTHORITY) * speedFraction
+        : 0;
     const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
-    const push = this.track.curvatureAt(this.distance) * this.speed * PlayerCar.CURVE_PUSH;
+    const push =
+      this.track.curvatureAt(this.distance) * this.speed * this.speed * PlayerCar.CURVE_PUSH;
     // A right-hand curve (positive curvature) throws the car to the left, and vice versa.
     this.lateral += (steer * PlayerCar.MAX_STEER_SPEED * authority - push) * dt;
     this.distance += this.speed * dt;

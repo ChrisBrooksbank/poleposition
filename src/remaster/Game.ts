@@ -145,6 +145,29 @@ export class Game {
 
     this.registerStates();
     this.resetPositions(0);
+    // Test hook: ?debug exposes the game so automated play-tests can jump between states.
+    if (new URLSearchParams(location.search).has('debug')) {
+      (window as unknown as { __game: Game }).__game = this;
+    }
+  }
+
+  /** Jump straight to a state (used by automated play-tests). */
+  debugGoto(state: GameState): void {
+    this.machine.transition(state);
+  }
+
+  /** Snapshot of key sim values for automated play-tests. */
+  debugInfo(): Record<string, number | string> {
+    return {
+      state: this.machine.state,
+      distance: this.car.distance,
+      lateral: this.car.lateral,
+      speedMph: this.car.speedMph,
+      score: this.score.score,
+      lap: this.grandPrix.currentLap,
+      position: this.racePosition(),
+      exploding: String(this.explosionState.isExploding),
+    };
   }
 
   start(): void {
@@ -587,8 +610,8 @@ export class Game {
   private placeCamera(distance: number, lateral: number): void {
     const cam = this.stage.camera;
     // Step back along the car's heading rather than along the lap so the camera stays tight.
-    const base = this.track.poseAt(distance, lateral * 0.6);
-    const look = this.track.poseAt(distance + CAMERA_LOOK_AHEAD, lateral * 0.3);
+    const base = this.track.poseAt(distance, lateral * 0.85);
+    const look = this.track.poseAt(distance + CAMERA_LOOK_AHEAD, lateral * 0.5);
     cam.position.set(
       base.x + Math.sin(base.heading) * CAMERA_BACK,
       base.y + CAMERA_HEIGHT,

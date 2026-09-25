@@ -14,7 +14,7 @@ describe('Fuji track data', () => {
 
   it('closes: heading turns a net 360 degrees and the lap ends where it started', () => {
     expect(end.heading).toBeCloseTo(2 * Math.PI, 2);
-    expect(Math.hypot(end.x, end.z)).toBeLessThan(3);
+    expect(Math.hypot(end.x, end.z)).toBeLessThan(0.01);
     expect(Math.abs(end.y)).toBeLessThan(0.5);
   });
 
