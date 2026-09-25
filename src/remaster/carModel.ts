@@ -90,6 +90,24 @@ export function createCarModel(opts: CarModelOptions): CarModel {
   group.add(box(0.05, 0.5, 0.6, paint, 0.8, 1.05, -2.05));
   group.add(box(0.08, 0.5, 0.15, CARBON, 0, 0.92, -1.9));
 
+  // Soft blob shadow to seat the car on the road.
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(1, 20),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.35,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -6,
+      polygonOffsetUnits: -6,
+    })
+  );
+  shadow.scale.set(1.0, 2.4, 1);
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.set(0, 0.02, 0);
+  group.add(shadow);
+
   const spinners: CarModel['spinners'] = [];
   const steerers: THREE.Object3D[] = [];
   const wheelSpecs = [

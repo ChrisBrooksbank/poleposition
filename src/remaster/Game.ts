@@ -140,6 +140,9 @@ export class Game {
 
     // Browsers only allow audio after a user gesture.
     const unlock = () => this.audio.resume();
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
+    });
     window.addEventListener('keydown', unlock);
     window.addEventListener('pointerdown', unlock);
 
@@ -151,9 +154,27 @@ export class Game {
     }
   }
 
+  private togglePause(): void {
+    const racing = [GameState.QUALIFYING, GameState.GRAND_PRIX].includes(this.machine.state);
+    if (!racing && !this.paused) return;
+    this.paused = !this.paused;
+    if (this.audio.isReady) {
+      if (this.paused) void this.audio.context.suspend();
+      else void this.audio.context.resume();
+    }
+  }
+
   /** Jump straight to a state (used by automated play-tests). */
   debugGoto(state: GameState): void {
     this.machine.transition(state);
+  }
+
+  /** Put the player somewhere specific (used by automated play-tests). */
+  debugTeleport(distance: number, lateral = 0, speedMph = 0): void {
+    this.car.distance = distance;
+    this.car.lateral = lateral;
+    this.car.speed = speedMph * MPH_TO_MS;
+    this.snapshot();
   }
 
   /** Snapshot of key sim values for automated play-tests. */
@@ -179,7 +200,10 @@ export class Game {
 
   // ─── Simulation ────────────────────────────────────────────────────────────
 
+  private paused = false;
+
   private step(dt: number): void {
+    if (this.paused) return;
     this.snapshot();
     this.machine.update(dt * 1000);
   }
@@ -395,6 +419,7 @@ export class Game {
           this.gridDisplay.reset(this.qualifying.gridPosition);
           this.sfx.triggerQualifyingComplete(this.qualifying.gridPosition === 1);
           this.endRun();
+          this.car.speed = 0;
           m.transition(GameState.GRID_DISPLAY);
         } else if (this.qualifying.outcome === QualifyingOutcome.FAILED) {
           this.endRun();
@@ -409,8 +434,17 @@ export class Game {
     });
 
     m.register(GameState.GRID_DISPLAY, {
+      onEnter: () => {
+        // Show the cars lined up on the grid, with the player in the slot just earned.
+        const slot = Math.max(0, (this.gridDisplay.gridPosition || AI_COUNT + 1) - 1);
+        this.ai.startGrid(slot);
+        this.car.respawn();
+        this.car.distance = gridSlot(slot).distance;
+        this.car.lateral = gridSlot(slot).lateral;
+        this.snapshot();
+        this.showTraffic = true;
+      },
       update: (dt) => {
-        this.ai.update(0);
         this.gridDisplay.update(dt);
         if (this.gridDisplay.isDone) m.transition(GameState.GRAND_PRIX);
       },
@@ -576,6 +610,7 @@ export class Game {
     this.stage.render();
 
     this.machine.render(this.ctx);
+    if (this.paused) screens.drawBanner(this.ctx, 'PAUSED');
   }
 
   private placePlayer(distance: number, lateral: number, exploding: boolean): void {
@@ -593,7 +628,7 @@ export class Game {
   }
 
   private placeTraffic(alpha: number, state: GameState): void {
-    const visible = this.showTraffic || state === GameState.GRID_DISPLAY;
+    const visible = this.showTraffic && state !== GameState.ATTRACT;
     this.ai.all.forEach((car, i) => {
       const model = this.aiModels[i];
       model.group.visible = visible;
@@ -612,10 +647,15 @@ export class Game {
     // Step back along the car's heading rather than along the lap so the camera stays tight.
     const base = this.track.poseAt(distance, lateral * 0.85);
     const look = this.track.poseAt(distance + CAMERA_LOOK_AHEAD, lateral * 0.5);
+    // While the car burns the camera pulls back and up so the whole explosion is in shot.
+    const pull = this.explosionState.isExploding
+      ? Math.min(1, this.explosionState.progress * 4)
+      : 0;
+    const back = CAMERA_BACK + pull * 7;
     cam.position.set(
-      base.x + Math.sin(base.heading) * CAMERA_BACK,
-      base.y + CAMERA_HEIGHT,
-      base.z - Math.cos(base.heading) * CAMERA_BACK
+      base.x + Math.sin(base.heading) * back,
+      base.y + CAMERA_HEIGHT + pull * 2.5,
+      base.z - Math.cos(base.heading) * back
     );
     if (this.shake > 0) {
       const t = performance.now() / 30;

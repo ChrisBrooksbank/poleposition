@@ -61,9 +61,9 @@ export class Explosion {
       p.fire = r() < 0.6;
       p.maxLife = p.fire ? 0.6 + r() * 0.8 : 1.4 + r() * 1.1;
       p.life = 0;
-      p.startScale = p.fire ? 0.5 + r() * 0.7 : 0.7 + r() * 0.9;
-      p.velocity.set((r() - 0.5) * 9, 2 + r() * 7, (r() - 0.5) * 9);
-      p.mesh.position.set((r() - 0.5) * 1.5, 0.5 + r(), (r() - 0.5) * 3);
+      p.startScale = p.fire ? 0.18 + r() * 0.3 : 0.25 + r() * 0.35;
+      p.velocity.set((r() - 0.5) * 7, 1.5 + r() * 5, (r() - 0.5) * 7);
+      p.mesh.position.set((r() - 0.5) * 1.4, 0.4 + r() * 0.8, (r() - 0.5) * 3);
       p.mesh.visible = true;
     }
   }
@@ -85,7 +85,7 @@ export class Explosion {
       p.velocity.y += (p.fire ? 1 : 3) * dt;
       p.velocity.multiplyScalar(1 - 0.8 * dt);
       p.mesh.position.addScaledVector(p.velocity, dt);
-      p.mesh.scale.setScalar(p.startScale * (1 + t * (p.fire ? 1.5 : 2.5)));
+      p.mesh.scale.setScalar(p.startScale * (1 + t * (p.fire ? 2 : 3.5)));
       const mat = p.mesh.material as THREE.MeshBasicMaterial;
       if (p.fire) {
         const stage = t * (FIRE.length - 1);
