@@ -31,7 +31,7 @@ export const AI_COUNT = 7;
 export const GRID_SPACING = 9;
 export const GRID_LANE = 2.6;
 /** Launch acceleration for AI cars off the grid, m/s^2. */
-const LAUNCH_ACCEL = 14;
+const LAUNCH_ACCEL = 24;
 
 /** Speeds sit below the player's 225 mph top so a good driver can pass everyone. */
 const CONFIGS: readonly AIConfig[] = [

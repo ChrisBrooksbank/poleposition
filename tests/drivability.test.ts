@@ -2,22 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { Track } from '../src/sim/Track';
 import { COURSES, REFERENCE_LAP_LENGTH } from '../src/sim/courses';
 import { FUJI } from '../src/sim/tracks/fuji';
-import { PlayerCar, MPH_TO_MS, type CarInput } from '../src/sim/PlayerCar';
+import { PlayerCar } from '../src/sim/PlayerCar';
+import { autopilotInput } from '../src/sim/Autopilot';
 import { computeGridPosition } from '../src/state/QualifyingState';
 
-const BRAKE_MS2 = PlayerCar.BRAKE_DECEL * MPH_TO_MS;
-
-/** Highest speed (m/s) at which steering can just hold the line through a curve of this curvature. */
-function cornerSpeed(curvature: number): number {
-  const k = Math.abs(curvature) * PlayerCar.CURVE_PUSH * 1.1;
-  const steerBase = PlayerCar.MAX_STEER_SPEED * PlayerCar.MIN_STEER_AUTHORITY;
-  const steerPerMs =
-    (PlayerCar.MAX_STEER_SPEED * (1 - PlayerCar.MIN_STEER_AUTHORITY)) / (225 * MPH_TO_MS);
-  if (k < 1e-9) return Infinity;
-  return (steerPerMs + Math.sqrt(steerPerMs ** 2 + 4 * k * steerBase)) / (2 * k);
-}
-
-/** A simple competent driver: holds the centreline and brakes early enough for every corner. */
+/** Runs the autopilot for one lap and reports how it got on. */
 function driveLap(
   track: Track,
   startDistance = 0
@@ -28,23 +17,7 @@ function driveLap(
   let time = 0;
   let offRoadTime = 0;
   while (car.distance < track.length && time < 200) {
-    // Braking check: look ahead for the speed each upcoming point allows.
-    let brake = false;
-    for (let d = 0; d <= 400; d += 10) {
-      const allowed = cornerSpeed(track.curvatureAt(car.distance + d));
-      if (car.speed ** 2 > allowed ** 2 + 2 * BRAKE_MS2 * d * 0.85) brake = true;
-    }
-    // Steer against the outward push, plus a proportional pull back to the centreline.
-    const curv = track.curvatureAt(car.distance);
-    const want = -car.lateral * 1.5 + curv * car.speed * car.speed * PlayerCar.CURVE_PUSH * 0;
-    const input: CarInput = {
-      left: want < -0.3 || (curv < 0 && car.lateral > 0.3 && want < 0.3),
-      right: want > 0.3,
-      throttle: !brake,
-      brake,
-      gear: car.speedMph > 55 ? 'high' : 'low',
-    };
-    car.step(dt, input);
+    car.step(dt, autopilotInput(track, car));
     if (car.offRoad) offRoadTime += dt;
     time += dt;
   }
@@ -80,5 +53,23 @@ describe.each(COURSES.map((c) => [c.name, c] as const))('%s drivability', (_name
     const { time, offRoadTime } = driveLap(track);
     expect(offRoadTime).toBeLessThan(4);
     expect(computeGridPosition(time * (REFERENCE_LAP_LENGTH / track.length))).toBeGreaterThan(0);
+  });
+});
+
+describe('autopilot with traffic', () => {
+  it('steers around a slower car in its lane instead of hitting it', () => {
+    const track = new Track(FUJI);
+    const car = new PlayerCar(track);
+    car.distance = 100;
+    car.speed = 60;
+    const blocker = { s: 300, lateral: 0 };
+    let minGap = Infinity;
+    for (let i = 0; i < 60 * 8; i++) {
+      blocker.s += 40 / 60;
+      car.step(1 / 60, autopilotInput(track, car, { obstacles: [blocker] }));
+      const along = Math.abs(blocker.s - track.wrap(car.distance));
+      if (along < 4.5) minGap = Math.min(minGap, Math.abs(blocker.lateral - car.lateral));
+    }
+    expect(minGap).toBeGreaterThan(2);
   });
 });

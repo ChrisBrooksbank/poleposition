@@ -12,6 +12,7 @@ import { COURSES, REFERENCE_LAP_LENGTH, type Course } from '../sim/courses';
 import { THEMES } from './themes';
 import { PlayerCar, MPH_TO_MS } from '../sim/PlayerCar';
 import { AIField, AI_COUNT, gridSlot } from '../sim/AIField';
+import { autopilotInput } from '../sim/Autopilot';
 import { buildSceneryLayout } from '../sim/scenery';
 import {
   type Box,
@@ -49,7 +50,6 @@ const CAMERA_HEIGHT = 2.6;
 const CAMERA_LOOK_AHEAD = 30;
 /** The old road-space unit: 110 px was the road half-width, which is 7 m. */
 const PX_TO_M = 7 / 110;
-const DEMO_START = 300;
 
 const AI_PALETTES = [
   { body: 0x1f5fd0, accent: 0xf5f5f5 },
@@ -222,6 +222,27 @@ export class Game {
     this.snapshot();
   }
 
+  private demoActive = false;
+  private demoRuns = 0;
+
+  private startDemo(): void {
+    const starts = [0, 1000, 2200, 3300];
+    this.demoActive = true;
+    this.ai.startQualifying();
+    this.car = new PlayerCar(this.track);
+    this.car.distance = starts[this.demoRuns++ % starts.length];
+    this.car.speed = 45;
+    this.showTraffic = true;
+    this.snapshot();
+  }
+
+  private stopDemo(): void {
+    this.demoActive = false;
+    this.showTraffic = false;
+    this.car = new PlayerCar(this.track);
+    this.resetPositions(0);
+  }
+
   private changeCourse(step: number): void {
     this.activateCourse(this.courseIndex + step);
     this.resetPositions(0);
@@ -268,6 +289,9 @@ export class Game {
       lap: this.grandPrix.currentLap,
       position: this.racePosition(),
       exploding: String(this.explosionState.isExploding),
+      drawCalls: this.stage.renderer.info.render.calls,
+      triangles: this.stage.renderer.info.render.triangles,
+      audio: this.audio.isReady ? this.audio.context.state : 'off',
     };
   }
 
@@ -281,6 +305,8 @@ export class Game {
   // ─── Simulation ────────────────────────────────────────────────────────────
 
   private paused = false;
+  /** Test hook: ?autopilot lets the built-in driver play the race. */
+  private autopilot = new URLSearchParams(location.search).has('autopilot');
 
   private step(dt: number): void {
     if (this.paused) return;
@@ -357,13 +383,17 @@ export class Game {
     }
 
     const before = this.car.distance;
-    const input = {
-      left: this.input.left,
-      right: this.input.right,
-      throttle: this.input.throttle,
-      brake: this.input.brake,
-      gear: this.input.gear,
-    };
+    const input = this.autopilot
+      ? autopilotInput(this.track, this.car, {
+          obstacles: this.ai.all.map((c) => ({ s: this.ai.sOf(c), lateral: c.lateral })),
+        })
+      : {
+          left: this.input.left,
+          right: this.input.right,
+          throttle: this.input.throttle,
+          brake: this.input.brake,
+          gear: this.input.gear,
+        };
     this.car.step(dt, input);
 
     // Puddles cause a spin and a lateral wobble; they never destroy the car.
@@ -445,24 +475,28 @@ export class Game {
         this.stateElapsed = 0;
         this.attract.reset();
         this.showTraffic = false;
+        this.demoActive = false;
         this.activateCourse(0);
         this.resetPositions(0);
+      },
+      onExit: () => {
+        this.demoActive = false;
+        this.showTraffic = false;
       },
       update: (dt) => {
         this.stateElapsed += dt;
         this.attract.update(dt);
-        if (this.attract.phase === AttractPhase.DEMO) {
-          // The demo car cruises down the road on its own.
-          this.car.distance = DEMO_START + this.attract.demoZ;
-          this.car.lateral = Math.sin(this.attract.elapsed / 900) * 1.5;
-          this.car.speed = AttractMode.DEMO_SPEED_MPH * MPH_TO_MS;
-        } else {
-          this.car.distance = 0;
-          this.car.lateral = 0;
-          this.car.speed = 0;
+        const demo = this.attract.phase === AttractPhase.DEMO;
+        if (demo && !this.demoActive) this.startDemo();
+        if (!demo && this.demoActive) this.stopDemo();
+        if (demo) {
+          // A real autopilot lap segment, with traffic, so the demo shows the actual driving.
+          this.snapshot();
+          const dtS = dt / 1000;
+          this.ai.update(dtS);
+          const obstacles = this.ai.all.map((c) => ({ s: this.ai.sOf(c), lateral: c.lateral }));
+          this.car.step(dtS, autopilotInput(this.track, this.car, { skill: 0.85, obstacles }));
         }
-        this.prevDistance = this.car.distance;
-        this.prevLateral = this.car.lateral;
         if (this.stateElapsed > 300) {
           if (this.confirmPressed || this.input.throttle) {
             this.audio.resume();
@@ -588,6 +622,8 @@ export class Game {
         this.beginRun(gridSlot(slot).distance);
         this.car.lateral = gridSlot(slot).lateral;
         this.prevLateral = this.car.lateral;
+        // Protect the player through the packed start so a slow-off-the-line neighbour cannot end the race.
+        this.invulnerableMs = 2500;
         // Baseline for overtake scoring without clearing the qualifying score.
         this.score.recordOvertakes(
           this.track.wrap(this.car.distance),

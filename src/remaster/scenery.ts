@@ -188,6 +188,45 @@ function createBackdrop(theme: Theme): THREE.Group {
     m.position.set(Math.sin(angle) * dist, h / 2, Math.cos(angle) * dist);
     group.add(m);
   }
+  group.add(createClouds());
+  return group;
+}
+
+/** Soft puffy clouds as camera-facing sprites, part of the camera-relative backdrop. */
+function createClouds(): THREE.Group {
+  const group = new THREE.Group();
+  const rand = seededRandom(31);
+  const texture = canvasTexture(256, 128, (ctx) => {
+    for (let i = 0; i < 9; i++) {
+      const x = 40 + rand() * 176;
+      const y = 50 + rand() * 40;
+      const r = 24 + rand() * 30;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    fog: false,
+    transparent: true,
+    depthWrite: false,
+    opacity: 0.85,
+  });
+  for (let i = 0; i < 16; i++) {
+    const sprite = new THREE.Sprite(material);
+    const angle = rand() * Math.PI * 2;
+    const dist = 9000 + rand() * 6000;
+    sprite.position.set(Math.sin(angle) * dist, 1400 + rand() * 1800, Math.cos(angle) * dist);
+    const w = 2800 + rand() * 2600;
+    sprite.scale.set(w, w * 0.4, 1);
+    sprite.renderOrder = -1;
+    group.add(sprite);
+  }
   return group;
 }
 
