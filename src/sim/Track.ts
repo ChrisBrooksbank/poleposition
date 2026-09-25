@@ -91,11 +91,18 @@ export class Track {
       points.push({ s, x, y, z, heading });
       const ds = Math.min(step, this.length - s);
       if (ds <= 0) break;
-      const mid = s + ds / 2;
-      heading += this.curvatureAt(mid) * ds;
-      x -= Math.sin(heading) * ds;
-      z += Math.cos(heading) * ds;
-      y += this.slopeAt(mid) * ds;
+      // Sub-step so segment boundaries inside a sample interval are integrated accurately.
+      const subs = Math.max(1, Math.ceil(ds / 0.25));
+      const sub = ds / subs;
+      for (let k = 0; k < subs; k++) {
+        const mid = s + (k + 0.5) * sub;
+        const curvature = this.curvatureAt(mid);
+        const midHeading = heading + (curvature * sub) / 2;
+        x -= Math.sin(midHeading) * sub;
+        z += Math.cos(midHeading) * sub;
+        y += this.slopeAt(mid) * sub;
+        heading += curvature * sub;
+      }
     }
     return points;
   }

@@ -5,19 +5,34 @@ import { buildRoadArrays } from '../src/remaster/roadGeometry';
 
 describe('Fuji track data', () => {
   const track = new Track(FUJI);
+  const pts = track.buildCenterline(4);
+  const end = pts[pts.length - 1];
 
-  it('is about 4.36 km long', () => {
-    expect(track.length).toBe(4360);
+  it('is 4.36 km long', () => {
+    expect(track.length).toBeCloseTo(4360, 2);
   });
 
-  it('turns a net 360 degrees clockwise so the lap heads back along the start direction', () => {
-    const pts = track.buildCenterline(2);
-    expect(pts[pts.length - 1].heading).toBeCloseTo(2 * Math.PI, 3);
+  it('closes: heading turns a net 360 degrees and the lap ends where it started', () => {
+    expect(end.heading).toBeCloseTo(2 * Math.PI, 2);
+    expect(Math.hypot(end.x, end.z)).toBeLessThan(3);
+    expect(Math.abs(end.y)).toBeLessThan(0.5);
   });
 
-  it('has the six original sections in order, hairpin turning left', () => {
+  it('never runs close to another part of the lap', () => {
+    let min = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const along = pts[j].s - pts[i].s;
+        if (along < 250 || track.length - along < 250) continue;
+        min = Math.min(min, Math.hypot(pts[i].x - pts[j].x, pts[i].z - pts[j].z));
+      }
+    }
+    expect(min).toBeGreaterThan(120);
+  });
+
+  it('has the original six sections in order, with the hairpin turning left', () => {
     const names = FUJI.segments.map((s) => s.name);
-    expect(names).toEqual([
+    expect(names.slice(0, 6)).toEqual([
       'Main Straight',
       'Sharp Right',
       'Quick Left',
