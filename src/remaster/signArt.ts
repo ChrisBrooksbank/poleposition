@@ -310,6 +310,74 @@ function seax(ctx: CanvasRenderingContext2D, x: number, y: number, len: number):
   ctx.restore();
 }
 
+/** A shaggy Highland cow face with a fringe and long curved horns. */
+function highlandCow(ctx: CanvasRenderingContext2D, cx: number, cy: number): void {
+  // Long upswept horns.
+  ctx.strokeStyle = '#f1e2b0';
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 10;
+  for (const dir of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + dir * 46, cy - 24);
+    ctx.quadraticCurveTo(cx + dir * 100, cy - 20, cx + dir * 96, cy - 74);
+    ctx.stroke();
+  }
+  // Shaggy ears.
+  for (const dir of [-1, 1]) {
+    ctx.save();
+    ctx.translate(cx + dir * 56, cy - 8);
+    ctx.rotate(dir * 1.2);
+    ellipse(ctx, 0, 0, 12, 26, '#b5501f', '#5a230c');
+    ctx.restore();
+  }
+  // Long ginger head, fringe over the eyes, pale muzzle.
+  ellipse(ctx, cx, cy + 6, 52, 66, '#c8642a', '#5a230c');
+  ctx.fillStyle = '#e07a35';
+  ctx.beginPath();
+  ctx.moveTo(cx - 50, cy - 30);
+  for (let i = 0; i <= 8; i++) {
+    ctx.lineTo(cx - 50 + i * 12.5, cy - 4 + (i % 2 ? 16 : -2));
+  }
+  ctx.lineTo(cx + 50, cy - 40);
+  ctx.quadraticCurveTo(cx, cy - 70, cx - 50, cy - 30);
+  ctx.fill();
+  eyes(ctx, cx, cy + 4, 22, 9);
+  ellipse(ctx, cx, cy + 46, 32, 24, '#e9c9a4', '#5a230c');
+  ellipse(ctx, cx - 12, cy + 46, 5, 7, '#3a1a0a');
+  ellipse(ctx, cx + 12, cy + 46, 5, 7, '#3a1a0a');
+}
+
+/** A tall clock tower (Big Ben) with a lit clock face, base at y. */
+function clockTower(ctx: CanvasRenderingContext2D, x: number, y: number, h: number): void {
+  const w = h * 0.2;
+  ctx.fillStyle = '#d8c48a';
+  ctx.fillRect(x - w / 2, y - h * 0.75, w, h * 0.75);
+  ctx.fillRect(x - w * 0.6, y - h * 0.86, w * 1.2, h * 0.14);
+  ctx.beginPath();
+  ctx.moveTo(x - w * 0.6, y - h * 0.86);
+  ctx.lineTo(x, y - h);
+  ctx.lineTo(x + w * 0.6, y - h * 0.86);
+  ctx.closePath();
+  ctx.fill();
+  circle(ctx, x, y - h * 0.66, w * 0.36, '#fff8dc', '#6b5a2a');
+  ctx.strokeStyle = '#3a3218';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x, y - h * 0.66);
+  ctx.lineTo(x, y - h * 0.66 - w * 0.26);
+  ctx.moveTo(x, y - h * 0.66);
+  ctx.lineTo(x + w * 0.18, y - h * 0.66);
+  ctx.stroke();
+}
+
+/** Red-white-blue roundel with a bar, in the style of the Underground. */
+function roundel(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number): void {
+  circle(ctx, cx, cy, r, '#e32017');
+  circle(ctx, cx, cy, r * 0.72, '#ffffff');
+  ctx.fillStyle = '#0019a8';
+  ctx.fillRect(cx - r * 1.25, cy - r * 0.2, r * 2.5, r * 0.4);
+}
+
 function frame(ctx: CanvasRenderingContext2D, bg: string, border: string): void {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
@@ -441,6 +509,94 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
     textLines(ctx, ['Oh Canada!'], 256, 78, 190, '#ffffff', 46);
     heart(ctx, 256, 128, 40, '#ffffff');
     textLines(ctx, ['Toronto'], 256, 156, 190, '#ffe3e0', 24);
+  },
+  'Scotland the Brave': (ctx) => {
+    frame(ctx, '#005eb8', '#ffffff');
+    // Saltire stripes behind the cow.
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 16;
+    ctx.beginPath();
+    ctx.moveTo(14, 14);
+    ctx.lineTo(W - 14, H - 14);
+    ctx.moveTo(W - 14, 14);
+    ctx.lineTo(14, H - 14);
+    ctx.stroke();
+    highlandCow(ctx, 112, 104);
+    textLines(ctx, ['Scotland', 'the Brave'], 344, 84, 260, '#ffffff', 58);
+    textLines(ctx, ['Haste ye back!'], 344, 156, 260, '#ffe08a', 28);
+  },
+  Belfast: (ctx) => {
+    frame(ctx, '#7a1f2b', '#f4ecd0');
+    // Cranes and the twin yellow gantries of the Belfast docks, plus a ship's hull.
+    ctx.fillStyle = '#f2c230';
+    for (const x of [52, 136]) {
+      ctx.fillRect(x, 44, 8, 116);
+      ctx.fillRect(x + 40, 44, 8, 116);
+      ctx.fillRect(x - 6, 40, 62, 10);
+      ctx.fillRect(x + 20, 74, 8, 4);
+    }
+    ctx.fillRect(40, 66, 130, 6);
+    ctx.fillStyle = '#1b1b1b';
+    ctx.fillRect(30, 150, 160, 18);
+    textLines(ctx, ['Belfast'], 348, 82, 270, '#f4ecd0', 66);
+    textLines(ctx, ['City of Titanic'], 348, 146, 270, '#f2c230', 30);
+  },
+  'London Calling': (ctx) => {
+    frame(ctx, '#c8102e', '#ffffff');
+    // A double-decker bus.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(28, 50, 150, 80);
+    ctx.fillStyle = '#ea1f2f';
+    ctx.fillRect(32, 54, 142, 72);
+    ctx.fillStyle = '#ffe9a0';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(40 + i * 33, 62, 26, 18);
+      ctx.fillRect(40 + i * 33, 92, 26, 18);
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(32, 84, 142, 4);
+    circle(ctx, 62, 132, 15, '#1a1a1a', '#cccccc');
+    circle(ctx, 144, 132, 15, '#1a1a1a', '#cccccc');
+    textLines(ctx, ['London', 'Calling!'], 344, 90, 260, '#ffffff', 64);
+    textLines(ctx, ['Ta-ra for now'], 344, 154, 260, '#ffe08a', 26);
+  },
+  'Mind the Gap': (ctx) => {
+    frame(ctx, '#1a1a2e', '#ffd21f');
+    roundel(ctx, 100, 96, 56);
+    ctx.fillStyle = '#ffd21f';
+    for (let x = 200; x < 480; x += 36) {
+      ctx.beginPath();
+      ctx.moveTo(x, 168);
+      ctx.lineTo(x + 18, 168);
+      ctx.lineTo(x + 36, 184);
+      ctx.lineTo(x + 18, 184);
+      ctx.closePath();
+      ctx.fill();
+    }
+    textLines(ctx, ['MIND THE', 'GAP'], 340, 84, 250, '#ffffff', 60);
+    textLines(ctx, ['London Underground'], 340, 148, 250, '#ffd21f', 26);
+  },
+  'Houses of Parliament': (ctx) => {
+    frame(ctx, '#2a4a7a', '#f4ecd0');
+    // Sky glow and the river.
+    ctx.fillStyle = '#3f6aa3';
+    ctx.fillRect(12, 140, W - 24, 40);
+    ctx.fillStyle = '#e8d9a0';
+    ctx.fillRect(28, 96, 230, 58);
+    // Gothic spires along the Palace roofline.
+    for (let x = 40; x < 250; x += 26) {
+      ctx.beginPath();
+      ctx.moveTo(x, 96);
+      ctx.lineTo(x + 8, 76);
+      ctx.lineTo(x + 16, 96);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = '#b39a55';
+    for (let x = 36; x < 250; x += 26) ctx.fillRect(x, 112, 10, 30);
+    clockTower(ctx, 290, 154, 130);
+    textLines(ctx, ['Houses of', 'Parliament'], 396, 84, 190, '#f4ecd0', 40);
+    textLines(ctx, ['Westminster'], 396, 148, 190, '#ffd24a', 24);
   },
 };
 
