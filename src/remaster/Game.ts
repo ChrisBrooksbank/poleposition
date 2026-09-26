@@ -142,12 +142,12 @@ export class Game {
     scene.add(this.explosionFx.group);
 
     this.overlay = document.createElement('canvas');
-    this.overlay.width = screens.W;
-    this.overlay.height = screens.H;
     this.overlay.style.cssText =
-      'position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none';
+      'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
     this.stage.wrapper.appendChild(this.overlay);
     this.ctx = this.overlay.getContext('2d') as CanvasRenderingContext2D;
+    this.resizeOverlay();
+    window.addEventListener('resize', () => this.resizeOverlay());
 
     // Optional CRT look (scanlines + vignette), toggled with C and remembered.
     const crt = document.createElement('div');
@@ -188,6 +188,19 @@ export class Game {
     if (new URLSearchParams(location.search).has('debug')) {
       (window as unknown as { __game: Game }).__game = this;
     }
+  }
+
+  /**
+   * Keeps the overlay canvas at the real display resolution so text stays sharp. Drawing code
+   * still works in the 256x224 arcade coordinate space via the context transform.
+   */
+  private resizeOverlay(): void {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.max(1, Math.round(this.stage.wrapper.clientWidth * dpr));
+    const height = Math.max(1, Math.round(this.stage.wrapper.clientHeight * dpr));
+    this.overlay.width = width;
+    this.overlay.height = height;
+    this.ctx.setTransform(width / screens.W, 0, 0, height / screens.H, 0, 0);
   }
 
   /** Builds (once) and shows a course, and points the sim at its track and hazards. */
