@@ -1,6 +1,8 @@
-# Pole Position Remastered
+# Pole Position (unofficial fan project)
 
-A 3D remaster of Namco's 1982 arcade racer, built with TypeScript, Vite and Three.js. Original art, procedural audio.
+A 3D fan recreation of the classic 1982 arcade racer, built with TypeScript, Vite and Three.js. Original art and procedural audio.
+
+> **Unofficial fan project. Not affiliated with, endorsed by or connected to Bandai Namco Entertainment.** "Pole Position" is a trademark of its respective owner. No original assets, code or sounds are used; all art is procedural and the sponsors are fictional.
 
 ```bash
 npm install

@@ -37,7 +37,7 @@ export function drawTitle(ctx: CanvasRenderingContext2D, elapsed: number, topSco
   dim(ctx, 0.5);
   text(ctx, 'POLE POSITION', W / 2, 62, 'bold 22px monospace', '#000');
   text(ctx, 'POLE POSITION', W / 2 - 1, 60, 'bold 22px monospace', '#ffdd00');
-  text(ctx, 'R E M A S T E R E D', W / 2, 78, 'bold 8px monospace', '#ff5533');
+  text(ctx, 'FAN PROJECT', W / 2, 78, 'bold 8px monospace', '#ff5533');
   text(ctx, `TOP  ${String(topScore).padStart(6, '0')}`, W / 2, 104, '8px monospace', '#ffffff');
   if (blink(elapsed))
     text(ctx, 'PRESS ENTER TO START', W / 2, 132, 'bold 8px monospace', '#ffffff');
@@ -50,6 +50,14 @@ export function drawTitle(ctx: CanvasRenderingContext2D, elapsed: number, topSco
     '#aaaaaa'
   );
   text(ctx, 'D - DIP SETTINGS', W / 2, 202, '6px monospace', '#777777');
+  text(
+    ctx,
+    'UNOFFICIAL FAN PROJECT - NOT AFFILIATED WITH BANDAI NAMCO',
+    W / 2,
+    216,
+    '5px monospace',
+    '#888888'
+  );
 }
 
 export function drawDemoLabel(ctx: CanvasRenderingContext2D, elapsed: number): void {
