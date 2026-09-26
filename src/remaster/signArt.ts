@@ -598,6 +598,88 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
     textLines(ctx, ['Houses of', 'Parliament'], 396, 84, 190, '#f4ecd0', 40);
     textLines(ctx, ['Westminster'], 396, 148, 190, '#ffd24a', 24);
   },
+  Maspalomas: (ctx) => {
+    frame(ctx, '#ff9d2e', '#fff1c2');
+    // Sky gradient, big sun with rays, and the dunes.
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, '#ffcf4a');
+    sky.addColorStop(1, '#ff7a3d');
+    ctx.fillStyle = sky;
+    ctx.fillRect(12, 12, W - 24, H - 24);
+    ctx.strokeStyle = '#fff3a8';
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(104 + Math.cos(a) * 46, 80 + Math.sin(a) * 46);
+      ctx.lineTo(104 + Math.cos(a) * 70, 80 + Math.sin(a) * 70);
+      ctx.stroke();
+    }
+    circle(ctx, 104, 80, 38, '#fff6b0', '#ffe03a');
+    ctx.fillStyle = '#e8b04a';
+    ctx.beginPath();
+    ctx.moveTo(12, 180);
+    ctx.quadraticCurveTo(70, 132, 130, 160);
+    ctx.quadraticCurveTo(190, 176, 230, 150);
+    ctx.lineTo(230, 180);
+    ctx.closePath();
+    ctx.fill();
+    // Silhouette of a woman with an hourglass figure, hair blowing in the breeze.
+    ctx.fillStyle = '#4a1d12';
+    ctx.beginPath();
+    ctx.moveTo(176, 40);
+    ctx.bezierCurveTo(166, 40, 164, 56, 172, 62);
+    ctx.bezierCurveTo(176, 66, 190, 66, 194, 60);
+    ctx.bezierCurveTo(200, 52, 196, 40, 186, 40);
+    ctx.closePath();
+    ctx.fill();
+    // Flowing hair.
+    ctx.beginPath();
+    ctx.moveTo(166, 46);
+    ctx.bezierCurveTo(150, 52, 146, 74, 154, 90);
+    ctx.bezierCurveTo(158, 76, 166, 64, 172, 58);
+    ctx.closePath();
+    ctx.fill();
+    // Shoulders, bust, waist, hips and legs.
+    ctx.beginPath();
+    ctx.moveTo(178, 64);
+    ctx.lineTo(178, 70);
+    ctx.bezierCurveTo(164, 72, 160, 84, 168, 96);
+    ctx.bezierCurveTo(174, 104, 174, 108, 168, 118);
+    ctx.bezierCurveTo(156, 130, 160, 146, 168, 172);
+    ctx.lineTo(176, 172);
+    ctx.lineTo(182, 130);
+    ctx.lineTo(188, 172);
+    ctx.lineTo(196, 172);
+    ctx.bezierCurveTo(204, 146, 208, 130, 196, 118);
+    ctx.bezierCurveTo(190, 108, 190, 104, 196, 96);
+    ctx.bezierCurveTo(204, 84, 200, 72, 186, 70);
+    ctx.lineTo(186, 64);
+    ctx.closePath();
+    ctx.fill();
+    textLines(ctx, ['Maspalomas'], 362, 74, 270, '#4a1d12', 56);
+    textLines(ctx, ['Gran Canaria'], 362, 132, 260, '#fff6c8', 30);
+  },
+  Osnabruck: (ctx) => {
+    frame(ctx, '#b3121f', '#ffffff');
+    // The wheel from the city's coat of arms.
+    circle(ctx, 100, 96, 66, '#ffffff', '#7d0c15');
+    circle(ctx, 100, 96, 54, '#b3121f');
+    circle(ctx, 100, 96, 44, '#ffffff');
+    ctx.strokeStyle = '#b3121f';
+    ctx.lineWidth = 7;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI;
+      ctx.beginPath();
+      ctx.moveTo(100 - Math.cos(a) * 54, 96 - Math.sin(a) * 54);
+      ctx.lineTo(100 + Math.cos(a) * 54, 96 + Math.sin(a) * 54);
+      ctx.stroke();
+    }
+    circle(ctx, 100, 96, 14, '#b3121f', '#ffffff');
+    textLines(ctx, ['Osnabrück'], 336, 78, 290, '#ffffff', 58);
+    textLines(ctx, ['Germany'], 336, 128, 290, '#ffd24a', 34);
+    textLines(ctx, ['City of Peace'], 336, 162, 290, '#ffe0e0', 22);
+  },
 };
 
 /** Draws a custom sign; returns false if `brand` is not one of the custom signs. */

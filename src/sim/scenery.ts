@@ -51,6 +51,8 @@ export const CUSTOM_SIGNS = [
   'London Calling',
   'Mind the Gap',
   'Houses of Parliament',
+  'Maspalomas',
+  'Osnabruck',
 ] as const;
 /** Billboard indices (counted from the start line) that carry a personal sign. Every course has at least 27 boards. */
 const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>> = {
@@ -60,11 +62,13 @@ const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>>
   4: 'Belfast',
   5: 'Lizzie & Chris',
   7: 'London Calling',
+  6: 'Maspalomas',
   8: 'George the Monkey',
   10: 'Mind the Gap',
   11: 'Beaulieu Park',
   13: 'Houses of Parliament',
   14: 'Toronto, Canada',
+  16: 'Osnabruck',
   17: 'Chelmsford, Essex',
   20: 'Deer Crossing',
   23: 'Home of Radio',
