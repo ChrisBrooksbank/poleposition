@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Track } from '../src/sim/Track';
 import { FUJI } from '../src/sim/tracks/fuji';
+import { COURSES } from '../src/sim/courses';
 import {
   buildSceneryLayout,
   groundHeight,
@@ -67,12 +68,17 @@ describe('groundHeight', () => {
 });
 
 describe('custom signs', () => {
-  it('places each personal sign once, early on the lap, on every course', () => {
-    const boards = buildSceneryLayout(track).filter((i) => i.kind === 'billboard');
-    for (const name of CUSTOM_SIGNS) {
-      const matches = boards.filter((b) => b.brand === name);
-      expect(matches).toHaveLength(1);
-      expect(matches[0].s).toBeLessThan(1200);
+  it('places each personal sign exactly once on every course', () => {
+    for (const course of COURSES) {
+      const boards = buildSceneryLayout(new Track(course.def)).filter(
+        (i) => i.kind === 'billboard'
+      );
+      for (const name of CUSTOM_SIGNS) {
+        expect(
+          boards.filter((b) => b.brand === name),
+          `${course.name}: ${name}`
+        ).toHaveLength(1);
+      }
     }
   });
 });

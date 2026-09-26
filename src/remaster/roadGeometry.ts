@@ -19,6 +19,8 @@ interface Band {
 
 const KERB = 1.2;
 const LINE = 0.25;
+/** Width in metres of the dashed line down the middle of the road. */
+const CENTRE_LINE = 0.3;
 /** Length in metres of one kerb/asphalt colour stripe. */
 export const STRIPE = 6;
 
@@ -31,7 +33,10 @@ function bands(half: number): Band[] {
   return [
     { from: -half - KERB, to: -half, colorA: RED, colorB: WHITE },
     { from: -half, to: -half + LINE, colorA: WHITE, colorB: WHITE },
-    { from: -half + LINE, to: half - LINE, colorA: ASPHALT_A, colorB: ASPHALT_B },
+    { from: -half + LINE, to: -CENTRE_LINE / 2, colorA: ASPHALT_A, colorB: ASPHALT_B },
+    // Dashed centre line: white for one stripe length, bare asphalt for the next.
+    { from: -CENTRE_LINE / 2, to: CENTRE_LINE / 2, colorA: WHITE, colorB: ASPHALT_B },
+    { from: CENTRE_LINE / 2, to: half - LINE, colorA: ASPHALT_A, colorB: ASPHALT_B },
     { from: half - LINE, to: half, colorA: WHITE, colorB: WHITE },
     { from: half, to: half + KERB, colorA: RED, colorB: WHITE },
   ];

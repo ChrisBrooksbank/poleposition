@@ -77,6 +77,31 @@ export function drawBanner(ctx: CanvasRenderingContext2D, label: string): void {
   text(ctx, label, W / 2, 112, 'bold 11px monospace', '#ffdd00');
 }
 
+/** The start gantry: three lamps that light red one by one, then all show green for GO. */
+export function drawStartLights(ctx: CanvasRenderingContext2D, red: number, green: boolean): void {
+  const cy = 56;
+  ctx.fillStyle = 'rgba(10,10,14,0.85)';
+  ctx.fillRect(W / 2 - 40, cy - 16, 80, 32);
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(W / 2 - 40, cy - 16, 80, 32);
+  for (let i = 0; i < 3; i++) {
+    const cx = W / 2 + (i - 1) * 24;
+    const lit = green || i < red;
+    ctx.fillStyle = lit ? (green ? '#22ee55' : '#ff2a1a') : '#3a1212';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fill();
+    if (lit) {
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath();
+      ctx.arc(cx - 3, cy - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  if (green) text(ctx, 'GO!', W / 2, cy + 34, 'bold 14px monospace', '#22ee55');
+}
+
 export function drawGrid(ctx: CanvasRenderingContext2D, gridPosition: number): void {
   dim(ctx, 0.65);
   text(ctx, 'GRID POSITION', W / 2, H / 2 - 16, 'bold 11px monospace', '#ffdd00');

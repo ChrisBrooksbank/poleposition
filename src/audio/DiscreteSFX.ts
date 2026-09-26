@@ -261,6 +261,14 @@ export class DiscreteSFX {
     );
   }
 
+  /** Higher, longer beep for the green light at the start of a race. */
+  triggerGoBeep(): void {
+    if (!this._audio.isReady) return;
+    const ctx = this._audio.context;
+    const dest = this._audio.getChannelInput(AudioChannel.SFX);
+    this._scheduleNote(ctx, dest, COUNTDOWN_BEEP_FREQ * 2, ctx.currentTime, 0.5, 0.6);
+  }
+
   /**
    * ~4s jingle played when qualifying ends.
    * @param isPole true for the triumphant pole-position variant.

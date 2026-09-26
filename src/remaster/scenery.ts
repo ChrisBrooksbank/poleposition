@@ -2,7 +2,13 @@
 // trees, posts, sponsor billboards, grandstands and the start/finish gantry.
 import * as THREE from 'three';
 import type { Track } from '../sim/Track';
-import { buildSceneryLayout, groundHeight, seededRandom, type SceneryItem } from '../sim/scenery';
+import {
+  BILLBOARD_TOE_IN,
+  buildSceneryLayout,
+  groundHeight,
+  seededRandom,
+  type SceneryItem,
+} from '../sim/scenery';
 import { buildTerrainArrays } from './terrainGeometry';
 import type { Theme } from './themes';
 import { drawCustomSign } from './signArt';
@@ -232,11 +238,17 @@ function createClouds(): THREE.Group {
   return group;
 }
 
-function facingRoad(heading: number, lateral: number): number {
-  // Right of heading h is (-cos h, 0, -sin h); a board on the right faces left, and vice versa.
-  return lateral > 0
-    ? Math.atan2(Math.cos(heading), Math.sin(heading))
-    : Math.atan2(-Math.cos(heading), -Math.sin(heading));
+/** Yaw for a board that faces the approaching driver, turned in towards the road by the toe-in. */
+function facingDriver(heading: number, lateral: number): number {
+  // Forward is (-sin h, 0, cos h) and right is (-cos h, 0, -sin h). The face normal is -forward
+  // swung towards the road centre, which is -right for a board on the right and +right otherwise.
+  const side = lateral > 0 ? 1 : -1;
+  const c = Math.cos(BILLBOARD_TOE_IN);
+  const s = Math.sin(BILLBOARD_TOE_IN) * side;
+  const nx = c * Math.sin(heading) + s * Math.cos(heading);
+  const nz = -c * Math.cos(heading) + s * Math.sin(heading);
+  // A Three.js plane's front faces local +z, which yaw θ turns to (sin θ, 0, cos θ).
+  return Math.atan2(nx, nz);
 }
 
 export function createScenery(track: Track, theme: Theme): Scenery {
@@ -354,7 +366,7 @@ export function createScenery(track: Track, theme: Theme): Scenery {
       board.add(leg);
     }
     board.position.set(pose.x, y, pose.z);
-    board.rotation.y = facingRoad(pose.heading, b.lateral);
+    board.rotation.y = facingDriver(pose.heading, b.lateral);
     group.add(board);
   }
 

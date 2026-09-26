@@ -5,6 +5,8 @@ import { createRoadMesh } from './RoadMesh';
 import { createScenery, type Scenery } from './scenery';
 import { createCarModel, animateCar, type CarModel } from './carModel';
 import { Explosion, createPuddleMeshes } from './effects';
+import { BannerPlane } from './bannerPlane';
+import { StartSequence } from '../state/StartSequence';
 import * as screens from './screens';
 import { FixedStepLoop } from '../sim/FixedStepLoop';
 import { Track } from '../sim/Track';
@@ -86,6 +88,8 @@ export class Game {
   private readonly playerModel: CarModel;
   private readonly aiModels: CarModel[] = [];
   private readonly explosionFx = new Explosion();
+  private readonly bannerPlane = new BannerPlane();
+  private readonly startSequence = new StartSequence();
 
   private readonly machine = new GameStateMachine(GameState.ATTRACT);
   private readonly attract = new AttractMode();
@@ -140,6 +144,7 @@ export class Game {
       scene.add(model.group);
     }
     scene.add(this.explosionFx.group);
+    scene.add(this.bannerPlane.mesh);
 
     this.overlay = document.createElement('canvas');
     this.overlay.style.cssText =
@@ -463,6 +468,24 @@ export class Game {
     this.sfx.updateGrassRumble(this.car.offRoad);
   }
 
+  /** Starts the banner flyby and start lights; the race is held until they go green. */
+  private beginStartSequence(label: string): void {
+    this.startSequence.reset();
+    this.bannerPlane.setLabel(label);
+  }
+
+  /** Advances the pre-race ceremony and returns true while the car must stay on the grid. */
+  private stepStartSequence(dtMs: number): boolean {
+    const seq = this.startSequence;
+    const wasHolding = seq.isHolding;
+    const reds = seq.redLights;
+    seq.update(dtMs);
+    if (seq.redLights > reds) this.sfx.triggerCountdownBeep();
+    if (wasHolding && !seq.isHolding) this.sfx.triggerGoBeep();
+    if (seq.isHolding) this.engine.update(0);
+    return seq.isHolding;
+  }
+
   private racePosition(): number {
     return 1 + this.ai.all.filter((c) => c.distance > this.raceDistance).length;
   }
@@ -591,8 +614,10 @@ export class Game {
         this.beginRun(0);
         this.sfx.triggerQualifyingFanfare();
         this.voice.triggerQualifyingStart();
+        this.beginStartSequence('QUALIFYING LAP');
       },
       update: (dt) => {
+        if (this.stepStartSequence(dt)) return;
         this.stepGameplay(dt);
         this.qualifying.update(dt, this.car.distance, this.track.length);
         if (this.qualifying.outcome === QualifyingOutcome.QUALIFIED) {
@@ -610,7 +635,11 @@ export class Game {
       render: (ctx) => {
         clear();
         hudNow(this.qualifying.timerSeconds);
-        if (this.qualifying.showAnnouncement) screens.drawBanner(ctx, 'QUALIFYING START');
+        if (this.startSequence.showLights) {
+          screens.drawStartLights(ctx, this.startSequence.redLights, this.startSequence.showGreen);
+        } else if (this.qualifying.showAnnouncement) {
+          screens.drawBanner(ctx, 'QUALIFYING START');
+        }
       },
     });
 
@@ -652,8 +681,10 @@ export class Game {
           this.track.length
         );
         this.voice.triggerGrandPrixStart();
+        this.beginStartSequence('GRAND PRIX');
       },
       update: (dt) => {
+        if (this.stepStartSequence(dt)) return;
         this.stepGameplay(dt);
         const lapCrossed = this.grandPrix.update(dt, this.car.distance, this.track.length);
         if (lapCrossed && this.grandPrix.outcome === GrandPrixOutcome.PENDING) {
@@ -678,7 +709,11 @@ export class Game {
           current: this.grandPrix.currentLap,
           total: this.grandPrix.totalLaps,
         });
-        if (this.grandPrix.showAnnouncement) screens.drawBanner(ctx, 'GRAND PRIX START');
+        if (this.startSequence.showLights) {
+          screens.drawStartLights(ctx, this.startSequence.redLights, this.startSequence.showGreen);
+        } else if (this.grandPrix.showAnnouncement) {
+          screens.drawBanner(ctx, 'GRAND PRIX START');
+        }
       },
     });
 
@@ -796,6 +831,12 @@ export class Game {
     this.placePlayer(distance, lateral, exploding);
     this.placeTraffic(alpha, state);
     this.placeCamera(distance, lateral);
+    const racing = state === GameState.QUALIFYING || state === GameState.GRAND_PRIX;
+    this.bannerPlane.update(
+      this.stage.camera,
+      this.startSequence.flybyProgress,
+      racing && this.startSequence.isFlyingBy
+    );
     this.scenery.update(this.stage.camera.position);
     this.stage.render();
 

@@ -1,7 +1,7 @@
 // hazards - puddles and collision boxes in track space (metres). Pure; no rendering.
 
 import type { Track } from './Track';
-import type { SceneryItem } from './scenery';
+import { BILLBOARD_TOE_IN, type SceneryItem } from './scenery';
 
 /** A puddle on the tarmac. `lateral` is metres from the centreline, positive to the right. */
 export interface Puddle {
@@ -35,7 +35,8 @@ export interface Box {
 
 export const CAR_HALF_LENGTH = 2.2;
 export const CAR_HALF_WIDTH = 1.0;
-export const BILLBOARD_HALF_LENGTH = 0.6;
+/** Thickness allowance around a billboard's rotated footprint. */
+const BILLBOARD_MARGIN = 0.4;
 
 export function carBox(s: number, lateral: number): Box {
   return { s, lateral, halfLength: CAR_HALF_LENGTH, halfWidth: CAR_HALF_WIDTH };
@@ -54,12 +55,16 @@ export function puddleBox(p: Puddle): Box {
 export function billboardBoxes(items: readonly SceneryItem[]): Box[] {
   return items
     .filter((i) => i.kind === 'billboard')
-    .map((i) => ({
-      s: i.s,
-      lateral: i.lateral,
-      halfLength: BILLBOARD_HALF_LENGTH,
-      halfWidth: (i.width ?? 8) / 2,
-    }));
+    .map((i) => {
+      // The board runs mostly along the road, so its footprint is long in s and narrow laterally.
+      const half = (i.width ?? 8) / 2;
+      return {
+        s: i.s,
+        lateral: i.lateral,
+        halfLength: half * Math.cos(BILLBOARD_TOE_IN) + BILLBOARD_MARGIN,
+        halfWidth: half * Math.sin(BILLBOARD_TOE_IN) + BILLBOARD_MARGIN,
+      };
+    });
 }
 
 /** Signed along-track distance a - b, taking the shorter way round the lap. */

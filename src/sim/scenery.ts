@@ -31,15 +31,34 @@ export const BILLBOARD_BRANDS = [
 ] as const;
 
 /**
- * Personal signs that replace three of the sponsor billboards on every course.
+ * Personal signs that replace some of the sponsor billboards on every course.
  * The keys are billboard indices counted from the start line (index 0 is the first sign); the
  * drawn artwork for each name lives in `src/remaster/signArt.ts`.
  */
-export const CUSTOM_SIGNS = ['Monty the Moose', 'Lizzie & Chris', 'George the Monkey'] as const;
+export const CUSTOM_SIGNS = [
+  'Monty the Moose',
+  'Lizzie & Chris',
+  'George the Monkey',
+  'Welcome to Chelmsford',
+  'Chelmsford, Essex',
+  'Beaulieu Park',
+  'Deer Crossing',
+  'Home of Radio',
+  'Toronto, Canada',
+  'Oh Canada',
+] as const;
+/** Billboard indices (counted from the start line) that carry a personal sign. Every course has at least 27 boards. */
 const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>> = {
+  0: 'Welcome to Chelmsford',
   2: 'Monty the Moose',
   5: 'Lizzie & Chris',
   8: 'George the Monkey',
+  11: 'Beaulieu Park',
+  14: 'Toronto, Canada',
+  17: 'Chelmsford, Essex',
+  20: 'Deer Crossing',
+  23: 'Home of Radio',
+  26: 'Oh Canada',
 };
 
 /** Width of the kerb strip either side of the road, matching the road mesh. */
@@ -51,6 +70,11 @@ export const TERRAIN_HALF_WIDTH = 60;
 
 export const BILLBOARD_SPACING = 110;
 export const BILLBOARD_WIDTH = 8;
+/**
+ * Billboards face back up the road at the approaching driver, turned in slightly towards the
+ * tarmac. This is the angle between the board's face and the road direction, in radians.
+ */
+export const BILLBOARD_TOE_IN = (25 * Math.PI) / 180;
 export const POST_SPACING = 40;
 export const START_LINE_S = 0;
 

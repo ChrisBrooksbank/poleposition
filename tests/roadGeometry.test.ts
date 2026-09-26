@@ -51,11 +51,21 @@ describe('buildRoadArrays', () => {
     segments: [{ name: 's', length: 20, curvature: 0, slope: 0 }],
   }).buildCenterline(10);
 
-  it('produces 5 bands of 4 vertices per row', () => {
+  it('produces 7 bands of 4 vertices per row', () => {
     const { positions, colors, indices } = buildRoadArrays(pts, 10);
-    expect(positions.length).toBe(2 * 5 * 4 * 3);
+    expect(positions.length).toBe(2 * 7 * 4 * 3);
     expect(colors.length).toBe(positions.length);
-    expect(indices.length).toBe(2 * 5 * 6);
+    expect(indices.length).toBe(2 * 7 * 6);
+  });
+
+  it('draws a dashed white centre line that alternates with bare asphalt', () => {
+    const { positions, colors } = buildRoadArrays(pts, 10);
+    // Band 3 of each row is the centre line; each band has 4 vertices of 3 floats.
+    const centreColor = (row: number) => colors[(row * 7 + 3) * 12];
+    const centreX = positions[(0 * 7 + 3) * 12];
+    expect(Math.abs(centreX)).toBeLessThan(0.2);
+    expect(centreColor(0)).toBeGreaterThan(0.9);
+    expect(centreColor(1)).toBeLessThan(0.4);
   });
 
   it('places the right kerb at -x when heading +z (driver right)', () => {
