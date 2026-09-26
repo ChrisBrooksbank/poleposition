@@ -30,6 +30,18 @@ export const BILLBOARD_BRANDS = [
   'HALCYON',
 ] as const;
 
+/**
+ * Personal signs that replace three of the sponsor billboards on every course.
+ * The keys are billboard indices counted from the start line (index 0 is the first sign); the
+ * drawn artwork for each name lives in `src/remaster/signArt.ts`.
+ */
+export const CUSTOM_SIGNS = ['Monty the Moose', 'Lizzie & Chris', 'George the Monkey'] as const;
+const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>> = {
+  2: 'Monty the Moose',
+  5: 'Lizzie & Chris',
+  8: 'George the Monkey',
+};
+
 /** Width of the kerb strip either side of the road, matching the road mesh. */
 export const KERB_WIDTH = 1.2;
 /** Width of flat verge outside the kerb before the embankment starts falling away. */
@@ -91,7 +103,7 @@ export function buildSceneryLayout(track: Track): SceneryItem[] {
       kind: 'billboard',
       s,
       lateral: side * (half + 5),
-      brand: BILLBOARD_BRANDS[i % BILLBOARD_BRANDS.length],
+      brand: CUSTOM_SIGN_SLOTS[i] ?? BILLBOARD_BRANDS[i % BILLBOARD_BRANDS.length],
       width: BILLBOARD_WIDTH,
     });
   }

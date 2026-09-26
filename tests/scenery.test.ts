@@ -5,6 +5,7 @@ import {
   buildSceneryLayout,
   groundHeight,
   seededRandom,
+  CUSTOM_SIGNS,
   KERB_WIDTH,
   TERRAIN_HALF_WIDTH,
 } from '../src/sim/scenery';
@@ -62,5 +63,16 @@ describe('groundHeight', () => {
     const mid = groundHeight(5, -10, 30, 14);
     expect(mid).toBeLessThan(4.7);
     expect(mid).toBeGreaterThan(-10);
+  });
+});
+
+describe('custom signs', () => {
+  it('places each personal sign once, early on the lap, on every course', () => {
+    const boards = buildSceneryLayout(track).filter((i) => i.kind === 'billboard');
+    for (const name of CUSTOM_SIGNS) {
+      const matches = boards.filter((b) => b.brand === name);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].s).toBeLessThan(1200);
+    }
   });
 });

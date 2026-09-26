@@ -5,6 +5,7 @@ import type { Track } from '../sim/Track';
 import { buildSceneryLayout, groundHeight, seededRandom, type SceneryItem } from '../sim/scenery';
 import { buildTerrainArrays } from './terrainGeometry';
 import type { Theme } from './themes';
+import { drawCustomSign } from './signArt';
 
 export interface Scenery {
   group: THREE.Group;
@@ -45,6 +46,7 @@ const BRAND_COLORS: Record<string, [string, string]> = {
 function billboardTexture(brand: string): THREE.CanvasTexture {
   const [bg, fg] = BRAND_COLORS[brand] ?? ['#333333', '#ffffff'];
   return canvasTexture(512, 192, (ctx) => {
+    if (drawCustomSign(ctx, brand)) return;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, 512, 192);
     ctx.fillStyle = fg;
