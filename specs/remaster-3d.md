@@ -25,9 +25,12 @@ A faithful remaster of Namco's 1982 Pole Position. Gameplay, track layouts, timi
 ## Architecture
 
 - `src/sim/`: pure simulation (track, physics, AI, race state, scoring). Reused from the existing code where it already matches the spec.
-- `src/render/`: Three.js scene, road mesh, cars, scenery, camera, post-processing.
+- `src/remaster/`: Three.js scene, road mesh, cars, scenery, camera, HUD/screens overlay and the game composition root (`Game.ts`).
 - `src/audio/`, `src/state/`, `src/settings/`: kept and adapted.
-- `src/main.ts`: thin composition root.
+
+## Courses
+
+Four selectable circuits, each with its own theme: Fuji Speedway (the arcade circuit, ~4.36 km, Mt. Fuji backdrop), Test Course, Suzuka and Seaside Speedway. Layouts are closed, non-self-crossing and solved numerically; qualifying thresholds and Grand Prix timers scale with lap length relative to Fuji.
 
 ## Acceptance
 

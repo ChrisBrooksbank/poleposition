@@ -1,5 +1,7 @@
 # Road Rendering
 
+> **Superseded.** The game now renders a true 3D road mesh with Three.js; see `remaster-3d.md`. The scanline approach below describes the original arcade technique and is kept as reference for the look and feel the remaster preserves (behind-the-car camera, road curvature ahead, roadside objects growing with distance).
+
 ## Overview
 
 Pseudo-3D road rendering system that recreates the Fuji Speedway circuit using horizontal scanline strips with perspective projection, curves, and hills.
