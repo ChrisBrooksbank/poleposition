@@ -62,8 +62,11 @@ export const CUSTOM_SIGNS = [
   'Curzon Soho',
   "Penderel's Oak",
   'Ye Olde Cheshire Cheese',
+  'Buddhism',
+  'Silent Retreat',
+  'Non-Self',
 ] as const;
-/** Billboard indices (counted from the start line) that carry a personal sign. Every course has at least 27 boards. */
+/** Billboard indices (counted from the start line) that carry a personal sign. Every course has at least 29 boards. */
 const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>> = {
   0: 'Welcome to Chelmsford',
   1: 'Scotland the Brave',
@@ -90,7 +93,10 @@ const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>>
   22: 'Shy London',
   23: 'Home of Radio',
   24: 'Ye Olde Cheshire Cheese',
+  25: 'Buddhism',
   26: 'Oh Canada',
+  27: 'Silent Retreat',
+  28: 'Non-Self',
 };
 
 /** Width of the kerb strip either side of the road, matching the road mesh. */
@@ -100,7 +106,7 @@ export const VERGE_WIDTH = 8;
 /** Lateral distance from the centreline at which the terrain ribbon meets the flat plane. */
 export const TERRAIN_HALF_WIDTH = 60;
 
-export const BILLBOARD_SPACING = 110;
+export const BILLBOARD_SPACING = 100;
 export const BILLBOARD_WIDTH = 8;
 /**
  * Billboards face back up the road at the approaching driver, turned in slightly towards the

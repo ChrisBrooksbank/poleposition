@@ -378,6 +378,40 @@ function roundel(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: numbe
   ctx.fillRect(cx - r * 1.25, cy - r * 0.2, r * 2.5, r * 0.4);
 }
 
+/** A figure sitting cross-legged in meditation, hands in the lap; `baseY` is the bottom of the legs. */
+function meditator(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  baseY: number,
+  scale: number,
+  fill: string
+): void {
+  ctx.save();
+  ctx.translate(cx, baseY);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = fill;
+  // Crossed legs.
+  ctx.beginPath();
+  ctx.ellipse(0, -12, 58, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Torso, shoulders and arms curving down to the lap.
+  ctx.beginPath();
+  ctx.moveTo(-34, -14);
+  ctx.bezierCurveTo(-44, -40, -40, -70, -26, -82);
+  ctx.lineTo(-10, -88);
+  ctx.lineTo(10, -88);
+  ctx.lineTo(26, -82);
+  ctx.bezierCurveTo(40, -70, 44, -40, 34, -14);
+  ctx.closePath();
+  ctx.fill();
+  // Neck and head.
+  ctx.fillRect(-6, -98, 12, 14);
+  ctx.beginPath();
+  ctx.ellipse(0, -110, 14, 17, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function frame(ctx: CanvasRenderingContext2D, bg: string, border: string): void {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
@@ -1109,6 +1143,101 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
     textLines(ctx, ['Ye Olde', 'Cheshire Cheese'], 364, 68, 236, '#e8dcc0', 40);
     textLines(ctx, ['Sticky toffee pudding'], 364, 138, 236, '#e8a24a', 24);
     textLines(ctx, ['Fleet Street'], 364, 164, 236, '#9a9a8a', 18);
+  },
+  Buddhism: (ctx) => {
+    frame(ctx, '#7a1f2b', '#f2c14e');
+    // A golden seated Buddha with a halo, above a pink lotus on its leaf.
+    circle(ctx, 118, 52, 38, '#f7d774');
+    circle(ctx, 118, 52, 30, '#ffe9a8');
+    ellipse(ctx, 118, 168, 92, 12, '#3f8a4a', '#2a6a36');
+    ctx.fillStyle = '#ff8fb4';
+    for (const [a, len] of [
+      [-1.35, 56],
+      [-0.9, 62],
+      [0.9, 62],
+      [1.35, 56],
+    ]) {
+      ctx.save();
+      ctx.translate(118, 162);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-16, -len * 0.6, 0, -len);
+      ctx.quadraticCurveTo(16, -len * 0.6, 0, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    meditator(ctx, 118, 158, 0.92, '#e0a82e');
+    // Small lotus flowers either side on the leaf.
+    for (const fx of [48, 188]) {
+      for (const [a, len] of [
+        [-0.7, 20],
+        [0, 24],
+        [0.7, 20],
+      ]) {
+        ctx.save();
+        ctx.translate(fx, 166);
+        ctx.rotate(a);
+        ctx.fillStyle = a === 0 ? '#ffc2d6' : '#ff8fb4';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(-9, -len * 0.6, 0, -len);
+        ctx.quadraticCurveTo(9, -len * 0.6, 0, 0);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+    // Topknot (ushnisha) and eyes closed in meditation.
+    circle(ctx, 118, 34, 7, '#e0a82e');
+    ctx.strokeStyle = '#8a5a14';
+    ctx.lineWidth = 2;
+    for (const dx of [-5, 5]) {
+      ctx.beginPath();
+      ctx.arc(118 + dx, 55, 3, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+    }
+    textLines(ctx, ['Buddhism'], 364, 74, 236, '#f2c14e', 54);
+    textLines(ctx, ['The Middle Way'], 364, 134, 236, '#ffd9e4', 26);
+  },
+  'Silent Retreat': (ctx) => {
+    frame(ctx, '#dfe8e4', '#5a7a6a');
+    // A man meditating on a cushion in a quiet room at dawn, eyes closed.
+    const glow = ctx.createRadialGradient(118, 80, 10, 118, 80, 110);
+    glow.addColorStop(0, '#fff4d8');
+    glow.addColorStop(1, '#dfe8e4');
+    ctx.fillStyle = glow;
+    ctx.fillRect(12, 12, 230, H - 24);
+    ellipse(ctx, 118, 166, 70, 10, '#8a6ab0');
+    meditator(ctx, 118, 160, 0.95, '#3a4a5a');
+    ctx.strokeStyle = '#dfe8e4';
+    ctx.lineWidth = 2;
+    for (const dx of [-5, 5]) {
+      ctx.beginPath();
+      ctx.arc(118 + dx, 56, 3, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+    }
+    textLines(ctx, ['Silent', 'Retreat'], 364, 80, 236, '#3a4a5a', 42);
+    textLines(ctx, ['Noble silence'], 364, 152, 236, '#5a7a6a', 22);
+  },
+  'Non-Self': (ctx) => {
+    frame(ctx, '#0f1a33', '#9ab8ff');
+    // The outline of a seated person dissolving into drifting points of light.
+    const rand = (() => {
+      let a = 7;
+      return () => {
+        a = (a * 16807) % 2147483647;
+        return a / 2147483647;
+      };
+    })();
+    meditator(ctx, 110, 168, 1.05, '#2e4478');
+    for (let i = 0; i < 90; i++) {
+      const t = rand();
+      const x = 60 + t * 170 + (rand() - 0.5) * 20;
+      const y = 20 + rand() * 150;
+      circle(ctx, x, y, 1 + rand() * 2.5 * t, `rgba(220,232,255,${(0.3 + 0.7 * t).toFixed(2)})`);
+    }
+    textLines(ctx, ['Non-Self'], 364, 76, 236, '#dce8ff', 56);
+    textLines(ctx, ['Anattā'], 364, 136, 236, '#9ab8ff', 30);
   },
 };
 
