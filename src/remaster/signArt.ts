@@ -763,48 +763,59 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
     textLines(ctx, ['Just Married'], 356, 58, 270, '#ffffff', 46);
     textLines(ctx, ['Hither Green', 'Church'], 356, 128, 270, '#1d3a6b', 36);
   },
-  Secrets: (ctx) => {
-    frame(ctx, '#1a0826', '#ff3ec8');
-    // Disco ball, spotlight beams and a keyhole.
-    for (const [x, c] of [
-      [60, 'rgba(255,62,200,0.35)'],
-      [150, 'rgba(62,220,255,0.35)'],
-    ] as const) {
-      ctx.fillStyle = c;
+  'Secret Club': (ctx) => {
+    frame(ctx, '#0e0e0a', '#c9a24a');
+    const gold = (y0: number, y1: number) => {
+      const g = ctx.createLinearGradient(0, y0, 0, y1);
+      g.addColorStop(0, '#fff2b0');
+      g.addColorStop(0.45, '#d9a83a');
+      g.addColorStop(0.55, '#8a5a14');
+      g.addColorStop(1, '#f0c860');
+      return g;
+    };
+    // A dark shield with a gold rim and a big gold S, in the style of the club's crest.
+    const shield = () => {
       ctx.beginPath();
-      ctx.moveTo(104, 50);
-      ctx.lineTo(x - 30, 180);
-      ctx.lineTo(x + 30, 180);
+      ctx.moveTo(52, 34);
+      ctx.quadraticCurveTo(116, 20, 180, 34);
+      ctx.lineTo(186, 30);
+      ctx.bezierCurveTo(192, 90, 170, 140, 116, 170);
+      ctx.bezierCurveTo(62, 140, 40, 90, 46, 30);
       ctx.closePath();
-      ctx.fill();
-    }
-    ctx.strokeStyle = '#d8d8e8';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(104, 12);
-    ctx.lineTo(104, 22);
+    };
+    shield();
+    ctx.fillStyle = '#3a3a24';
+    ctx.fill();
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = gold(24, 170);
     ctx.stroke();
-    circle(ctx, 104, 50, 28, '#b8b8d0', '#ffffff');
-    ctx.strokeStyle = '#6a6a88';
-    ctx.lineWidth = 1.5;
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(76, 50 + i * 10);
-      ctx.lineTo(132, 50 + i * 10);
-      ctx.moveTo(104 + i * 10, 22);
-      ctx.lineTo(104 + i * 10, 78);
-      ctx.stroke();
-    }
-    for (const [x, y] of [
-      [26, 30],
-      [186, 40],
-      [40, 120],
-      [176, 150],
-    ]) {
-      circle(ctx, x, y, 3, '#fff6a8');
-    }
-    textLines(ctx, ['Secrets'], 362, 74, 270, '#ff3ec8', 64);
-    textLines(ctx, ['CITA Centre', 'Gran Canaria'], 362, 140, 270, '#7fe8ff', 26);
+    ctx.font = 'bold 120px Georgia, "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = gold(40, 150);
+    ctx.strokeText('S', 116, 98);
+    ctx.fillStyle = '#2a2a18';
+    ctx.fillText('S', 116, 98);
+    ctx.strokeText('S', 116, 98);
+    // SECRET in bevelled gold capitals across the shield.
+    ctx.font = 'bold 40px Georgia, "Times New Roman", serif';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#3a2408';
+    ctx.strokeText('SECRET', 116, 98);
+    ctx.fillStyle = gold(82, 114);
+    ctx.fillText('SECRET', 116, 98);
+    // Name and place.
+    ctx.font = 'bold 52px Georgia, "Times New Roman", serif';
+    ctx.lineWidth = 4;
+    ctx.strokeText('Secret', 362, 58);
+    ctx.fillStyle = gold(34, 82);
+    ctx.fillText('Secret', 362, 58);
+    ctx.font = 'bold 34px Georgia, "Times New Roman", serif';
+    ctx.strokeText('Club', 362, 104);
+    ctx.fillStyle = gold(88, 120);
+    ctx.fillText('Club', 362, 104);
+    textLines(ctx, ['CITA Centre, Gran Canaria'], 362, 152, 250, '#e8d9a8', 20);
   },
   'Glastonbury Tor': (ctx) => {
     frame(ctx, '#2a3a6e', '#e8d9a8');
