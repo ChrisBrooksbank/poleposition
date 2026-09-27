@@ -923,6 +923,145 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
     textLines(ctx, ['Shy London'], 366, 70, 260, '#6a4cc2', 56);
     textLines(ctx, ['For socially anxious', 'Londoners'], 366, 136, 260, '#c2447a', 24);
   },
+  'Curzon Soho': (ctx) => {
+    frame(ctx, '#161616', '#d9b45a');
+    // A film strip behind a steaming cup of coffee.
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(24, 40, 200, 90);
+    ctx.fillStyle = '#d9b45a';
+    for (let x = 30; x < 220; x += 18) {
+      ctx.fillRect(x, 46, 10, 8);
+      ctx.fillRect(x, 116, 10, 8);
+    }
+    ctx.fillStyle = '#3d3d3d';
+    for (const x of [34, 100, 166]) ctx.fillRect(x, 60, 52, 50);
+    ctx.strokeStyle = '#f4ecd0';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    for (const dx of [-12, 0, 12]) {
+      ctx.beginPath();
+      ctx.moveTo(124 + dx, 100);
+      ctx.bezierCurveTo(118 + dx, 90, 130 + dx, 84, 124 + dx, 72);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(94, 108);
+    ctx.lineTo(154, 108);
+    ctx.lineTo(148, 160);
+    ctx.lineTo(100, 160);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(156, 128, 12, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+    ellipse(ctx, 124, 166, 44, 7, '#d9b45a');
+    ctx.fillStyle = '#6b3a1e';
+    ctx.fillRect(98, 110, 52, 6);
+    textLines(ctx, ['CURZON'], 364, 62, 236, '#d9b45a', 58);
+    textLines(ctx, ['Shaftesbury Avenue'], 364, 112, 236, '#f4ecd0', 26);
+    textLines(ctx, ['Shy London coffees'], 364, 150, 236, '#ff9ec0', 22);
+  },
+  "Penderel's Oak": (ctx) => {
+    frame(ctx, '#1f4a2c', '#d9b45a');
+    // A great oak tree beside a pint of ale.
+    ctx.fillStyle = '#5a3a1e';
+    ctx.fillRect(80, 100, 22, 72);
+    ctx.beginPath();
+    ctx.moveTo(80, 172);
+    ctx.lineTo(70, 180);
+    ctx.lineTo(112, 180);
+    ctx.lineTo(102, 172);
+    ctx.fill();
+    for (const [x, y, r] of [
+      [60, 88, 34],
+      [124, 88, 34],
+      [92, 60, 40],
+      [70, 50, 26],
+      [118, 48, 26],
+      [92, 100, 30],
+    ]) {
+      circle(ctx, x, y, r, '#3f8a3a');
+    }
+    for (const [x, y] of [
+      [64, 70],
+      [110, 64],
+      [130, 96],
+      [80, 98],
+    ]) {
+      ellipse(ctx, x, y, 5, 7, '#b8862e');
+      ctx.fillStyle = '#6b4a1e';
+      ctx.fillRect(x - 5, y - 8, 10, 4);
+    }
+    // Pint glass.
+    ctx.fillStyle = '#c9771e';
+    ctx.beginPath();
+    ctx.moveTo(172, 80);
+    ctx.lineTo(214, 80);
+    ctx.lineTo(208, 168);
+    ctx.lineTo(178, 168);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fff4d8';
+    ctx.beginPath();
+    ctx.moveTo(170, 66);
+    ctx.lineTo(216, 66);
+    ctx.lineTo(214, 84);
+    ctx.lineTo(172, 84);
+    ctx.closePath();
+    ctx.fill();
+    circle(ctx, 180, 66, 8, '#fff4d8');
+    circle(ctx, 196, 62, 10, '#fff4d8');
+    circle(ctx, 210, 66, 7, '#fff4d8');
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(182, 90, 6, 70);
+    textLines(ctx, ["Penderel's", 'Oak'], 364, 80, 236, '#f4ecd0', 52);
+    textLines(ctx, ['Holborn'], 364, 154, 236, '#d9b45a', 26);
+  },
+  'Ye Olde Cheshire Cheese': (ctx) => {
+    frame(ctx, '#1a1a1a', '#e8dcc0');
+    // A bowl of sticky toffee pudding with sauce running down and a dollop of cream.
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(120, 140, 92, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#6b3514';
+    ctx.beginPath();
+    ctx.moveTo(62, 138);
+    ctx.lineTo(70, 76);
+    ctx.quadraticCurveTo(120, 60, 170, 76);
+    ctx.lineTo(178, 138);
+    ctx.quadraticCurveTo(120, 152, 62, 138);
+    ctx.fill();
+    // Toffee sauce on top, dripping down the sides and pooling.
+    ctx.fillStyle = '#b8661c';
+    ctx.beginPath();
+    ctx.ellipse(120, 76, 50, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    for (const [x, len] of [
+      [78, 38],
+      [96, 58],
+      [122, 30],
+      [144, 64],
+      [164, 44],
+    ]) {
+      ctx.fillRect(x - 5, 76, 10, len);
+      circle(ctx, x, 76 + len, 6, '#b8661c');
+    }
+    ctx.beginPath();
+    ctx.ellipse(120, 146, 70, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    circle(ctx, 110, 62, 16, '#fff8e8');
+    circle(ctx, 126, 58, 14, '#fff8e8');
+    circle(ctx, 118, 48, 10, '#fff8e8');
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(74, 90, 5, 30);
+    textLines(ctx, ['Ye Olde', 'Cheshire Cheese'], 364, 68, 236, '#e8dcc0', 40);
+    textLines(ctx, ['Sticky toffee pudding'], 364, 138, 236, '#e8a24a', 24);
+    textLines(ctx, ['Fleet Street'], 364, 164, 236, '#9a9a8a', 18);
+  },
 };
 
 /** Draws a custom sign; returns false if `brand` is not one of the custom signs. */

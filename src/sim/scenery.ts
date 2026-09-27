@@ -59,6 +59,9 @@ export const CUSTOM_SIGNS = [
   'Double R Club',
   'Peterborough',
   'Shy London',
+  'Curzon Soho',
+  "Penderel's Oak",
+  'Ye Olde Cheshire Cheese',
 ] as const;
 /** Billboard indices (counted from the start line) that carry a personal sign. Every course has at least 27 boards. */
 const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>> = {
@@ -80,10 +83,13 @@ const CUSTOM_SIGN_SLOTS: Readonly<Record<number, (typeof CUSTOM_SIGNS)[number]>>
   15: 'Double R Club',
   16: 'Osnabruck',
   17: 'Chelmsford, Essex',
+  18: 'Curzon Soho',
   19: 'Peterborough',
   20: 'Deer Crossing',
+  21: "Penderel's Oak",
   22: 'Shy London',
   23: 'Home of Radio',
+  24: 'Ye Olde Cheshire Cheese',
   26: 'Oh Canada',
 };
 
