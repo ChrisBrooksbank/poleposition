@@ -680,6 +680,235 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
     textLines(ctx, ['Germany'], 336, 128, 290, '#ffd24a', 34);
     textLines(ctx, ['City of Peace'], 336, 162, 290, '#ffe0e0', 22);
   },
+  'Hither Green Church': (ctx) => {
+    frame(ctx, '#7fb4e0', '#ffffff');
+    // Grass, then a stone church: nave, tower with spire and a gothic door.
+    ctx.fillStyle = '#5d9e4a';
+    ctx.fillRect(12, 150, 200, 30);
+    ctx.fillStyle = '#c9b48f';
+    ctx.fillRect(40, 96, 110, 58);
+    ctx.fillStyle = '#8a4b3a';
+    ctx.beginPath();
+    ctx.moveTo(34, 98);
+    ctx.lineTo(95, 66);
+    ctx.lineTo(156, 98);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#b8a27c';
+    ctx.fillRect(150, 70, 40, 84);
+    ctx.fillStyle = '#6e7a86';
+    ctx.beginPath();
+    ctx.moveTo(146, 72);
+    ctx.lineTo(170, 18);
+    ctx.lineTo(194, 72);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#4a2a1a';
+    ctx.beginPath();
+    ctx.moveTo(158, 154);
+    ctx.lineTo(158, 128);
+    ctx.quadraticCurveTo(170, 112, 182, 128);
+    ctx.lineTo(182, 154);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffd24a';
+    for (const x of [58, 86, 114]) {
+      ctx.beginPath();
+      ctx.moveTo(x, 138);
+      ctx.lineTo(x, 116);
+      ctx.quadraticCurveTo(x + 8, 104, x + 16, 116);
+      ctx.lineTo(x + 16, 138);
+      ctx.closePath();
+      ctx.fill();
+    }
+    heart(ctx, 84, 40, 34, '#ff2d55');
+    heart(ctx, 120, 30, 24, '#ffd1dc');
+    textLines(ctx, ['Just Married'], 356, 58, 270, '#ffffff', 46);
+    textLines(ctx, ['Hither Green', 'Church'], 356, 128, 270, '#1d3a6b', 36);
+  },
+  Secrets: (ctx) => {
+    frame(ctx, '#1a0826', '#ff3ec8');
+    // Disco ball, spotlight beams and a keyhole.
+    for (const [x, c] of [
+      [60, 'rgba(255,62,200,0.35)'],
+      [150, 'rgba(62,220,255,0.35)'],
+    ] as const) {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(104, 50);
+      ctx.lineTo(x - 30, 180);
+      ctx.lineTo(x + 30, 180);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.strokeStyle = '#d8d8e8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(104, 12);
+    ctx.lineTo(104, 22);
+    ctx.stroke();
+    circle(ctx, 104, 50, 28, '#b8b8d0', '#ffffff');
+    ctx.strokeStyle = '#6a6a88';
+    ctx.lineWidth = 1.5;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(76, 50 + i * 10);
+      ctx.lineTo(132, 50 + i * 10);
+      ctx.moveTo(104 + i * 10, 22);
+      ctx.lineTo(104 + i * 10, 78);
+      ctx.stroke();
+    }
+    for (const [x, y] of [
+      [26, 30],
+      [186, 40],
+      [40, 120],
+      [176, 150],
+    ]) {
+      circle(ctx, x, y, 3, '#fff6a8');
+    }
+    textLines(ctx, ['Secrets'], 362, 74, 270, '#ff3ec8', 64);
+    textLines(ctx, ['CITA Centre', 'Gran Canaria'], 362, 140, 270, '#7fe8ff', 26);
+  },
+  'Glastonbury Tor': (ctx) => {
+    frame(ctx, '#2a3a6e', '#e8d9a8');
+    // Twilight sky, crescent moon, the Tor with St Michael's tower on top.
+    const sky = ctx.createLinearGradient(0, 12, 0, 180);
+    sky.addColorStop(0, '#2a3a6e');
+    sky.addColorStop(1, '#c47a9a');
+    ctx.fillStyle = sky;
+    ctx.fillRect(12, 12, W - 24, H - 24);
+    circle(ctx, 60, 44, 16, '#fff4c8');
+    circle(ctx, 68, 40, 14, '#3a4a7c');
+    ctx.fillStyle = '#3d6b3a';
+    ctx.beginPath();
+    ctx.moveTo(12, 180);
+    ctx.bezierCurveTo(40, 170, 80, 96, 120, 92);
+    ctx.bezierCurveTo(160, 96, 200, 160, 240, 170);
+    ctx.lineTo(240, 180);
+    ctx.closePath();
+    ctx.fill();
+    // Terraces ringing the hill.
+    ctx.strokeStyle = '#2e5530';
+    ctx.lineWidth = 2;
+    for (const y of [120, 140, 160]) {
+      ctx.beginPath();
+      ctx.ellipse(120, y, (y - 90) * 1.05, 6, 0, 0, Math.PI);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#8a7a5a';
+    ctx.fillRect(112, 56, 16, 40);
+    ctx.beginPath();
+    ctx.moveTo(110, 58);
+    ctx.lineTo(120, 46);
+    ctx.lineTo(130, 58);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#2a2418';
+    ctx.fillRect(117, 80, 6, 16);
+    textLines(ctx, ['Glastonbury', 'Tor'], 370, 82, 230, '#fff4c8', 50);
+    textLines(ctx, ['Somerset'], 372, 154, 250, '#ffd8e8', 24);
+  },
+  'Double R Club': (ctx) => {
+    // Red velvet curtains over a zig-zag floor.
+    frame(ctx, '#140404', '#c9a24a');
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(12, 12, W - 24, H - 24);
+    ctx.clip();
+    for (let i = 0; i < 12; i++) {
+      const x = 12 + i * 41;
+      ctx.fillStyle = i % 2 === 0 ? '#b00010' : '#8a000c';
+      ctx.fillRect(x, 12, 41, 126);
+    }
+    for (let i = 0; i < 20; i++) {
+      const x = 12 + i * 26;
+      for (let row = 0; row < 3; row++) {
+        ctx.fillStyle = (i + row) % 2 === 0 ? '#111111' : '#f4f0e6';
+        ctx.beginPath();
+        const y = 138 + row * 14;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 13, y + 7);
+        ctx.lineTo(x + 26, y);
+        ctx.lineTo(x + 26, y + 14);
+        ctx.lineTo(x + 13, y + 21);
+        ctx.lineTo(x, y + 14);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    textLines(ctx, ['The Double R Club'], 256, 60, 440, '#ffe9a8', 54);
+    textLines(ctx, ['Cabaret'], 256, 110, 440, '#ffffff', 30);
+  },
+  Peterborough: (ctx) => {
+    frame(ctx, '#e8dcc0', '#1d3a6b');
+    // The cathedral's west front: three great arches between towers.
+    ctx.fillStyle = '#c9ae7a';
+    ctx.fillRect(28, 60, 180, 112);
+    ctx.fillStyle = '#b89a62';
+    for (const x of [22, 190]) {
+      ctx.fillRect(x, 36, 24, 136);
+      ctx.beginPath();
+      ctx.moveTo(x, 36);
+      ctx.lineTo(x + 12, 16);
+      ctx.lineTo(x + 24, 36);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = '#3a2a1a';
+    for (const [x, w] of [
+      [52, 36],
+      [100, 36],
+      [148, 36],
+    ]) {
+      ctx.beginPath();
+      ctx.moveTo(x, 172);
+      ctx.lineTo(x, 100);
+      ctx.quadraticCurveTo(x + w / 2, 62, x + w, 100);
+      ctx.lineTo(x + w, 172);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = '#b89a62';
+    for (const x of [70, 118, 166]) {
+      ctx.beginPath();
+      ctx.moveTo(x - 16, 60);
+      ctx.lineTo(x, 40);
+      ctx.lineTo(x + 16, 60);
+      ctx.closePath();
+      ctx.fill();
+    }
+    textLines(ctx, ['Peterborough'], 368, 70, 260, '#1d3a6b', 50);
+    textLines(ctx, ['Where it all began'], 368, 126, 260, '#8a4b3a', 26);
+  },
+  'Shy London': (ctx) => {
+    frame(ctx, '#ffe7ef', '#6a4cc2');
+    // A little group of shy smiley faces, one peeking out from behind the others.
+    const faces: [number, number, number, string][] = [
+      [60, 118, 30, '#ffd24a'],
+      [118, 108, 34, '#7fd6a8'],
+      [176, 120, 28, '#7fb4e0'],
+      [150, 58, 22, '#ffa8c8'],
+    ];
+    for (const [x, y, r, c] of faces) {
+      circle(ctx, x, y, r, c, '#3a2a4a');
+      circle(ctx, x - r * 0.32, y - r * 0.1, r * 0.1, '#3a2a4a');
+      circle(ctx, x + r * 0.32, y - r * 0.1, r * 0.1, '#3a2a4a');
+      ctx.fillStyle = 'rgba(255,90,120,0.45)';
+      for (const dx of [-0.5, 0.5]) {
+        ctx.beginPath();
+        ctx.ellipse(x + dx * r, y + r * 0.22, r * 0.18, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(x, y + r * 0.2, r * 0.25, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#3a2a4a';
+      ctx.stroke();
+    }
+    textLines(ctx, ['Shy London'], 366, 70, 260, '#6a4cc2', 56);
+    textLines(ctx, ['For socially anxious', 'Londoners'], 366, 136, 260, '#c2447a', 24);
+  },
 };
 
 /** Draws a custom sign; returns false if `brand` is not one of the custom signs. */
