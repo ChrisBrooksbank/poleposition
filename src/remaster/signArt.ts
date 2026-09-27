@@ -883,29 +883,43 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
   },
   'Shy London': (ctx) => {
     frame(ctx, '#ffe7ef', '#6a4cc2');
-    // A little group of shy smiley faces, one peeking out from behind the others.
-    const faces: [number, number, number, string][] = [
-      [60, 118, 30, '#ffd24a'],
-      [118, 108, 34, '#7fd6a8'],
-      [176, 120, 28, '#7fb4e0'],
-      [150, 58, 22, '#ffa8c8'],
-    ];
-    for (const [x, y, r, c] of faces) {
-      circle(ctx, x, y, r, c, '#3a2a4a');
-      circle(ctx, x - r * 0.32, y - r * 0.1, r * 0.1, '#3a2a4a');
-      circle(ctx, x + r * 0.32, y - r * 0.1, r * 0.1, '#3a2a4a');
-      ctx.fillStyle = 'rgba(255,90,120,0.45)';
-      for (const dx of [-0.5, 0.5]) {
-        ctx.beginPath();
-        ctx.ellipse(x + dx * r, y + r * 0.22, r * 0.18, r * 0.1, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.beginPath();
-      ctx.arc(x, y + r * 0.2, r * 0.25, 0.2 * Math.PI, 0.8 * Math.PI);
-      ctx.lineWidth = 2.5;
-      ctx.strokeStyle = '#3a2a4a';
-      ctx.stroke();
+    // The group's blushing smiley: orange ball, eyes glancing aside, rosy cheeks.
+    const [x, y, r] = [118, 96, 72];
+    const ball = ctx.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.1, x, y, r);
+    ball.addColorStop(0, '#ffe24a');
+    ball.addColorStop(0.6, '#ffb000');
+    ball.addColorStop(1, '#f07800');
+    circle(ctx, x, y, r, '#ffb000', '#8a4a10');
+    ctx.fillStyle = ball;
+    ctx.beginPath();
+    ctx.arc(x, y, r - 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    for (const dx of [-0.58, 0.58]) {
+      const blush = ctx.createRadialGradient(
+        x + dx * r,
+        y + r * 0.2,
+        0,
+        x + dx * r,
+        y + r * 0.2,
+        r * 0.22
+      );
+      blush.addColorStop(0, 'rgba(240,30,30,0.85)');
+      blush.addColorStop(1, 'rgba(240,60,30,0)');
+      ctx.fillStyle = blush;
+      ctx.fillRect(x + dx * r - r * 0.25, y - r * 0.05, r * 0.5, r * 0.5);
     }
+    for (const dx of [-0.28, 0.28]) {
+      ellipse(ctx, x + dx * r, y - r * 0.2, r * 0.19, r * 0.22, '#ffffff', '#6a3a10');
+      circle(ctx, x + dx * r - r * 0.05, y - r * 0.16, r * 0.13, '#111111');
+      circle(ctx, x + dx * r - r * 0.09, y - r * 0.22, r * 0.035, '#ffffff');
+    }
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.3, y + r * 0.22);
+    ctx.quadraticCurveTo(x - r * 0.02, y + r * 0.62, x + r * 0.3, y + r * 0.2);
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#5a2e0c';
+    ctx.stroke();
     textLines(ctx, ['Shy London'], 366, 70, 260, '#6a4cc2', 56);
     textLines(ctx, ['For socially anxious', 'Londoners'], 366, 136, 260, '#c2447a', 24);
   },
