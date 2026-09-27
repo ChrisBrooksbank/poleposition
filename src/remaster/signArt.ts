@@ -600,65 +600,102 @@ const DRAWERS: Record<(typeof CUSTOM_SIGNS)[number], Drawer> = {
   },
   Maspalomas: (ctx) => {
     frame(ctx, '#ff9d2e', '#fff1c2');
-    // Sky gradient, big sun with rays, and the dunes.
-    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    // Sunset sky, a big sun with rays, then sea and sand across the whole board.
+    const sky = ctx.createLinearGradient(0, 12, 0, 120);
     sky.addColorStop(0, '#ffcf4a');
     sky.addColorStop(1, '#ff7a3d');
     ctx.fillStyle = sky;
     ctx.fillRect(12, 12, W - 24, H - 24);
     ctx.strokeStyle = '#fff3a8';
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 4;
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2;
       ctx.beginPath();
-      ctx.moveTo(104 + Math.cos(a) * 46, 80 + Math.sin(a) * 46);
-      ctx.lineTo(104 + Math.cos(a) * 70, 80 + Math.sin(a) * 70);
+      ctx.moveTo(70 + Math.cos(a) * 30, 50 + Math.sin(a) * 30);
+      ctx.lineTo(70 + Math.cos(a) * 44, 50 + Math.sin(a) * 44);
       ctx.stroke();
     }
-    circle(ctx, 104, 80, 38, '#fff6b0', '#ffe03a');
+    circle(ctx, 70, 50, 24, '#fff6b0', '#ffe03a');
+    ctx.fillStyle = '#2f8fc0';
+    ctx.fillRect(12, 104, W - 24, 20);
     ctx.fillStyle = '#e8b04a';
     ctx.beginPath();
     ctx.moveTo(12, 180);
-    ctx.quadraticCurveTo(70, 132, 130, 160);
-    ctx.quadraticCurveTo(190, 176, 230, 150);
-    ctx.lineTo(230, 180);
+    ctx.lineTo(12, 124);
+    ctx.quadraticCurveTo(256, 114, W - 12, 126);
+    ctx.lineTo(W - 12, 180);
     ctx.closePath();
     ctx.fill();
-    // Silhouette of a woman with an hourglass figure, hair blowing in the breeze.
-    ctx.fillStyle = '#4a1d12';
+    textLines(ctx, ['Maspalomas'], 330, 44, 300, '#4a1d12', 52);
+    textLines(ctx, ['Gran Canaria'], 330, 86, 300, '#fff6c8', 26);
+
+    ctx.save();
+    ctx.translate(34, 56);
+    ctx.scale(1.3, 1.3);
+    // Striped beach towel.
+    ['#e0303a', '#ffffff', '#1fa0a8', '#ffffff', '#e0303a'].forEach((c, i) => {
+      const y0 = 76 + i * 3;
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(8 - i * 1.6, y0);
+      ctx.lineTo(236 - i * 1.6, y0);
+      ctx.lineTo(236 - (i + 1) * 1.6, y0 + 3);
+      ctx.lineTo(8 - (i + 1) * 1.6, y0 + 3);
+      ctx.closePath();
+      ctx.fill();
+    });
+    // Silhouette of a woman sunbathing on her side: head propped on one hand, curve of waist and
+    // hip along the top, one leg stretched out and the other kicked up behind.
+    const skin = '#4a1d12';
+    ctx.strokeStyle = skin;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.moveTo(176, 40);
-    ctx.bezierCurveTo(166, 40, 164, 56, 172, 62);
-    ctx.bezierCurveTo(176, 66, 190, 66, 194, 60);
-    ctx.bezierCurveTo(200, 52, 196, 40, 186, 40);
-    ctx.closePath();
-    ctx.fill();
-    // Flowing hair.
+    ctx.moveTo(30, 74);
+    ctx.lineTo(38, 42);
+    ctx.stroke();
+    ctx.lineWidth = 8;
     ctx.beginPath();
-    ctx.moveTo(166, 46);
-    ctx.bezierCurveTo(150, 52, 146, 74, 154, 90);
-    ctx.bezierCurveTo(158, 76, 166, 64, 172, 58);
-    ctx.closePath();
-    ctx.fill();
-    // Shoulders, bust, waist, hips and legs.
+    ctx.moveTo(46, 36);
+    ctx.lineTo(56, 46);
+    ctx.stroke();
+    ctx.lineWidth = 11;
     ctx.beginPath();
-    ctx.moveTo(178, 64);
-    ctx.lineTo(178, 70);
-    ctx.bezierCurveTo(164, 72, 160, 84, 168, 96);
-    ctx.bezierCurveTo(174, 104, 174, 108, 168, 118);
-    ctx.bezierCurveTo(156, 130, 160, 146, 168, 172);
-    ctx.lineTo(176, 172);
-    ctx.lineTo(182, 130);
-    ctx.lineTo(188, 172);
-    ctx.lineTo(196, 172);
-    ctx.bezierCurveTo(204, 146, 208, 130, 196, 118);
-    ctx.bezierCurveTo(190, 108, 190, 104, 196, 96);
-    ctx.bezierCurveTo(204, 84, 200, 72, 186, 70);
-    ctx.lineTo(186, 64);
+    ctx.moveTo(182, 70);
+    ctx.quadraticCurveTo(204, 62, 210, 42);
+    ctx.stroke();
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(210, 40);
+    ctx.lineTo(220, 30);
+    ctx.stroke();
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.moveTo(54, 46);
+    ctx.bezierCurveTo(62, 48, 68, 52, 74, 56);
+    ctx.bezierCurveTo(86, 62, 96, 66, 106, 64);
+    ctx.bezierCurveTo(118, 46, 138, 42, 148, 56);
+    ctx.bezierCurveTo(160, 62, 176, 64, 190, 66);
+    ctx.bezierCurveTo(204, 66, 216, 70, 226, 72);
+    ctx.lineTo(232, 76);
+    ctx.lineTo(64, 77);
+    ctx.bezierCurveTo(54, 72, 50, 60, 54, 46);
     ctx.closePath();
     ctx.fill();
-    textLines(ctx, ['Maspalomas'], 362, 74, 270, '#4a1d12', 56);
-    textLines(ctx, ['Gran Canaria'], 362, 132, 260, '#fff6c8', 30);
+    circle(ctx, 44, 32, 9, skin);
+    // Long red hair over the top of her head, down her back and blowing out in the breeze.
+    ctx.fillStyle = '#e04418';
+    ctx.beginPath();
+    ctx.moveTo(35, 30);
+    ctx.bezierCurveTo(36, 18, 54, 18, 54, 30);
+    ctx.bezierCurveTo(56, 38, 62, 44, 74, 50);
+    ctx.bezierCurveTo(62, 52, 54, 46, 50, 38);
+    ctx.bezierCurveTo(48, 32, 44, 28, 40, 28);
+    ctx.bezierCurveTo(30, 30, 20, 20, 8, 24);
+    ctx.bezierCurveTo(16, 14, 30, 18, 35, 30);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   },
   Osnabruck: (ctx) => {
     frame(ctx, '#b3121f', '#ffffff');
