@@ -132,10 +132,11 @@ export function drawRaceComplete(
   text(ctx, `SCORE  ${String(score).padStart(6, '0')}`, W / 2, H / 2 + 28, f, '#fff');
 }
 
-export function drawGameOver(ctx: CanvasRenderingContext2D): void {
+export function drawGameOver(ctx: CanvasRenderingContext2D, reason = ''): void {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
   text(ctx, 'GAME OVER', W / 2, H / 2, 'bold 16px monospace', '#ff2222');
+  if (reason) text(ctx, reason, W / 2, H / 2 + 20, 'bold 8px monospace', '#ffdd00');
 }
 
 export interface NameEntryView {

@@ -32,6 +32,8 @@ export class ScoreTracker {
   static readonly PTS_PER_SECOND_REMAINING = 200;
 
   private _score: number = 0;
+  /** Fractional distance points not yet added to the score. */
+  private _distancePts = 0;
   /**
    * For each AI car index, stores whether the player was ahead of that car at
    * the end of the last `recordOvertakes` call.
@@ -50,7 +52,12 @@ export class ScoreTracker {
    */
   addDistance(meters: number): void {
     if (meters <= 0) return;
-    this._score += Math.floor(meters * ScoreTracker.PTS_PER_METER);
+    // Carry the fraction over: per-frame distances are small, and flooring each one would
+    // throw away most of a point every frame.
+    this._distancePts += meters * ScoreTracker.PTS_PER_METER;
+    const whole = Math.floor(this._distancePts);
+    this._distancePts -= whole;
+    this._score += whole;
   }
 
   /**
@@ -117,6 +124,7 @@ export class ScoreTracker {
    */
   reset(): void {
     this._score = 0;
+    this._distancePts = 0;
     this._playerWasAhead = [];
   }
 }

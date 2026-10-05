@@ -189,3 +189,17 @@ describe('DIPSwitchPanel — reset', () => {
     expect(panel.selectedRow).toBe(1);
   });
 });
+
+describe('DIPSwitchPanel — keys held on entry', () => {
+  it('does not change a value for a key that was already down when the panel opened', () => {
+    const settings = new DIPSwitchSettings();
+    const panel = new DIPSwitchPanel(settings);
+    // D opens the panel and is also "right": it must not bump the first row.
+    panel.reset({ right: true });
+    panel.update(false, false, false, true, false);
+    expect(settings.qualifyingTime).toBe(90);
+    panel.update(false, false, false, false, false);
+    panel.update(false, false, false, true, false);
+    expect(settings.qualifyingTime).toBe(100);
+  });
+});

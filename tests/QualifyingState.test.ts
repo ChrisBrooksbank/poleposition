@@ -202,6 +202,13 @@ describe('QualifyingState — lap completion → QUALIFIED', () => {
     expect(qs.gridPosition).toBe(0);
   });
 
+  it('fails a completed lap that is too slow to qualify', () => {
+    const qs = new QualifyingState(90);
+    qs.update(80_000, TRACK_LENGTH, TRACK_LENGTH);
+    expect(qs.outcome).toBe(QualifyingOutcome.FAILED);
+    expect(qs.lapTimeSecs).toBeCloseTo(80, 2);
+  });
+
   it('qualifies when playerZ exceeds trackLength (overshoots finish)', () => {
     const qs = new QualifyingState(90);
     qs.update(60_000, TRACK_LENGTH + 100, TRACK_LENGTH);
@@ -229,6 +236,8 @@ describe('QualifyingState — lap completion → QUALIFIED', () => {
 describe('QualifyingState — lap completion takes priority over timer expiry', () => {
   it('QUALIFIED if playerZ reaches trackLength exactly when timer hits 0', () => {
     const qs = new QualifyingState(90);
+    // A long circuit (half-scale thresholds) so a 90 s lap still earns a grid slot.
+    qs.reset(90, 0.5);
     // Update with exactly 90s elapsed and playerZ at finish — lap wins.
     qs.update(90_000, TRACK_LENGTH, TRACK_LENGTH);
     expect(qs.outcome).toBe(QualifyingOutcome.QUALIFIED);
@@ -276,5 +285,23 @@ describe('QualifyingState time scale', () => {
     // 40 s on a circuit twice the reference length is equivalent to 20 s: pole position.
     expect(q.lapTimeSecs).toBeCloseTo(40, 3);
     expect(q.gridPosition).toBe(1);
+  });
+});
+
+describe('QualifyingState — Practice Rank cut-off', () => {
+  it('a lenient rank lets a 75 s lap start 8th', () => {
+    expect(computeGridPosition(75, 76)).toBe(8);
+  });
+
+  it('a strict rank fails a lap that rank C would put 4th', () => {
+    expect(computeGridPosition(63, 62)).toBe(0);
+  });
+
+  it('applies the cut-off passed to reset', () => {
+    const qs = new QualifyingState(90);
+    qs.reset(90, 1, 80);
+    qs.update(78_000, TRACK_LENGTH, TRACK_LENGTH);
+    expect(qs.outcome).toBe(QualifyingOutcome.QUALIFIED);
+    expect(qs.gridPosition).toBe(8);
   });
 });

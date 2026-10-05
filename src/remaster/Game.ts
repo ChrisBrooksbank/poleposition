@@ -127,6 +127,12 @@ export class Game {
   private prevAiLateral: number[] = [];
   private showTraffic = false;
   private wheelDistance = 0;
+  /** Gear used for the last sim step. */
+  private drivenGear: 'low' | 'high' = 'low';
+  /** True once the finished game's score has been offered to the high-score table. */
+  private scoreRecorded = false;
+  /** Shown under GAME OVER: why the game ended. */
+  private gameOverReason = '';
 
   constructor(host: HTMLElement) {
     this.stage = new Stage(host);
@@ -177,14 +183,24 @@ export class Game {
       }
     });
 
-    // Browsers only allow audio after a user gesture.
-    const unlock = () => this.audio.resume();
+    // Browsers only allow audio after a user gesture. While paused the context stays suspended,
+    // otherwise any key press would bring the engine drone back over the pause screen.
+    const unlock = () => {
+      if (this.paused) return;
+      this.audio.resume();
+      this.audio.setMasterVolume(this.muted ? 0 : 1);
+    };
     window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
       if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
-      if (e.code === 'KeyM' && this.audio.isReady) this.toggleMute();
+      if (e.code === 'KeyM') this.toggleMute();
     });
     window.addEventListener('keydown', unlock);
     window.addEventListener('pointerdown', unlock);
+    // Leaving the tab mid-race freezes the frame loop but not the audio; pause properly instead.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && !this.paused) this.togglePause();
+    });
 
     this.registerStates();
     this.activateCourse(0);
@@ -248,7 +264,7 @@ export class Game {
     const starts = [0, 1000, 2200, 3300];
     this.demoActive = true;
     this.ai.startQualifying();
-    this.car = new PlayerCar(this.track);
+    this.car = new PlayerCar(this.track, this.dip.topSpeedMph);
     this.car.distance = starts[this.demoRuns++ % starts.length];
     this.car.speed = 45;
     this.showTraffic = true;
@@ -258,7 +274,7 @@ export class Game {
   private stopDemo(): void {
     this.demoActive = false;
     this.showTraffic = false;
-    this.car = new PlayerCar(this.track);
+    this.car = new PlayerCar(this.track, this.dip.topSpeedMph);
     this.resetPositions(0);
   }
 
@@ -279,7 +295,8 @@ export class Game {
     const racing = [GameState.QUALIFYING, GameState.GRAND_PRIX].includes(this.machine.state);
     if (!racing && !this.paused) return;
     this.paused = !this.paused;
-    if (this.audio.isReady) {
+    // A suspended context is not "ready", so test that it exists rather than isReady.
+    if (this.audio.isCreated) {
       if (this.paused) void this.audio.context.suspend();
       else void this.audio.context.resume();
     }
@@ -338,6 +355,7 @@ export class Game {
     if (this.paused) return;
     this.snapshot();
     this.machine.update(dt * 1000);
+    this.input.endStep();
     this.music.update();
   }
 
@@ -421,6 +439,7 @@ export class Game {
           gear: this.input.gear,
         };
     this.car.step(dt, input);
+    this.drivenGear = input.gear;
 
     // Puddles cause a spin and a lateral wobble; they never destroy the car.
     this.puddleSpin.update(dtMs);
@@ -503,15 +522,18 @@ export class Game {
         useKph: this.dip.useKph,
         lapCurrent: lap?.current,
         lapTotal: lap?.total,
-        racePosition: this.racePosition(),
+        // Qualifying is a solo time trial: traffic is not a race order.
+        racePosition: lap ? this.racePosition() : 0,
       });
       this.ctx.font = 'bold 8px monospace';
       this.ctx.textAlign = 'center';
       this.ctx.fillStyle = '#ffdd00';
       this.ctx.fillText(`TOP ${String(this.topScore()).padStart(6, '0')}`, screens.W / 2, 12);
       this.ctx.textAlign = 'right';
-      this.ctx.fillStyle = this.input.gear === 'high' ? '#ff6644' : '#66ddff';
-      this.ctx.fillText(this.input.gear === 'high' ? 'HIGH' : 'LOW', screens.W - 4, screens.H - 8);
+      // The gear the car is actually in (the autopilot test hook picks its own).
+      const high = (this.autopilot ? this.drivenGear : this.input.gear) === 'high';
+      this.ctx.fillStyle = high ? '#ff6644' : '#66ddff';
+      this.ctx.fillText(high ? 'HIGH' : 'LOW', screens.W - 4, screens.H - 8);
     };
 
     m.register(GameState.ATTRACT, {
@@ -609,8 +631,14 @@ export class Game {
     m.register(GameState.QUALIFYING, {
       onEnter: () => {
         this.score.reset();
+        this.scoreRecorded = false;
+        this.gameOverReason = '';
         this.ai.startQualifying();
-        this.qualifying.reset(this.dip.qualifyingTime, REFERENCE_LAP_LENGTH / this.track.length);
+        this.qualifying.reset(
+          this.dip.qualifyingTime,
+          REFERENCE_LAP_LENGTH / this.track.length,
+          this.dip.qualifyingCutoffSeconds
+        );
         this.beginRun(0);
         this.sfx.triggerQualifyingFanfare();
         this.voice.triggerQualifyingStart();
@@ -628,6 +656,7 @@ export class Game {
           this.car.speed = 0;
           m.transition(GameState.GRID_DISPLAY);
         } else if (this.qualifying.outcome === QualifyingOutcome.FAILED) {
+          this.gameOverReason = this.qualifying.lapTimeSecs > 0 ? 'DID NOT QUALIFY' : 'TIME UP';
           this.endRun();
           m.transition(GameState.GAME_OVER);
         }
@@ -695,10 +724,12 @@ export class Game {
         if (this.grandPrix.outcome === GrandPrixOutcome.COMPLETE) {
           this.score.addTimeBonus(this.grandPrix.timerMs);
           this.raceComplete.reset(this.grandPrix.timerMs);
+          this.gameOverReason = 'RACE COMPLETE';
           this.endRun();
           this.sfx.triggerRaceComplete();
           m.transition(GameState.RACE_COMPLETE);
         } else if (this.grandPrix.outcome === GrandPrixOutcome.FAILED) {
+          this.gameOverReason = 'TIME UP';
           this.endRun();
           m.transition(GameState.GAME_OVER);
         }
@@ -729,7 +760,7 @@ export class Game {
           gear: 'high',
         });
         this.raceComplete.update(dt);
-        if (this.raceComplete.isDone) m.transition(GameState.NAME_ENTRY);
+        if (this.raceComplete.isDone) m.transition(this.afterGameState());
       },
       render: (ctx) => {
         clear();
@@ -750,9 +781,11 @@ export class Game {
       onExit: () => this.music.stop(),
       update: (dt) => {
         this.stateElapsed += dt;
-        if (this.stateElapsed > 3000) m.transition(GameState.ATTRACT);
+        if (this.stateElapsed > 3000) {
+          m.transition(this.scoreRecorded ? GameState.ATTRACT : this.afterGameState());
+        }
       },
-      render: (ctx) => screens.drawGameOver(ctx),
+      render: (ctx) => screens.drawGameOver(ctx, this.gameOverReason),
     });
 
     m.register(GameState.NAME_ENTRY, {
@@ -797,7 +830,15 @@ export class Game {
     });
 
     m.register(GameState.SETTINGS, {
-      onEnter: () => this.dipPanel.reset(),
+      // D opens this screen and also steers right, so keys already held must not act.
+      onEnter: () =>
+        this.dipPanel.reset({
+          up: this.input.throttle,
+          down: this.input.brake,
+          left: this.input.left,
+          right: this.input.right,
+          confirm: this.confirmPressed,
+        }),
       update: () => {
         this.dipPanel.update(
           this.input.throttle,
@@ -813,6 +854,14 @@ export class Game {
         this.dipPanel.render(ctx, screens.W, screens.H);
       },
     });
+  }
+
+  /** Once a game ends: initials for a table-worthy score, otherwise back to the attract loop. */
+  private afterGameState(): GameState {
+    this.scoreRecorded = true;
+    const s = this.score.score;
+    if (s > 0 && this.highScores.isHighScore(s)) return GameState.NAME_ENTRY;
+    return this.machine.state === GameState.GAME_OVER ? GameState.ATTRACT : GameState.GAME_OVER;
   }
 
   private topScore(): number {
@@ -847,8 +896,12 @@ export class Game {
   private placePlayer(distance: number, lateral: number, exploding: boolean): void {
     const pose = this.track.poseAt(distance, lateral);
     const model = this.playerModel;
-    // Blink while protected after a respawn.
-    const blinkHidden = this.invulnerableMs > 0 && Math.floor(this.invulnerableMs / 120) % 2 === 0;
+    // Blink while protected after a respawn. The timer is frozen while the start lights hold the
+    // grid, and could freeze on a hidden phase, so only blink once the car is free to go.
+    const blinkHidden =
+      this.invulnerableMs > 0 &&
+      !this.startSequence.isHolding &&
+      Math.floor(this.invulnerableMs / 120) % 2 === 0;
     model.group.visible = !exploding && !blinkHidden;
     model.group.position.set(pose.x, pose.y, pose.z);
     const spin = this.puddleSpin.isSpinning
@@ -861,7 +914,8 @@ export class Game {
   }
 
   private placeTraffic(alpha: number, state: GameState): void {
-    const visible = this.showTraffic && state !== GameState.ATTRACT;
+    // The attract demo turns traffic on itself; the title card leaves it off.
+    const visible = this.showTraffic && (state !== GameState.ATTRACT || this.demoActive);
     this.ai.all.forEach((car, i) => {
       const model = this.aiModels[i];
       model.group.visible = visible;

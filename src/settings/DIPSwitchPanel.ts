@@ -106,15 +106,16 @@ export class DIPSwitchPanel {
     return this._row;
   }
 
-  /** Reset panel to initial state ready for display. */
-  reset(): void {
+  /** Reset panel to initial state ready for display; `held` lists keys already down. */
+  reset(held: Partial<Record<'up' | 'down' | 'left' | 'right' | 'confirm', boolean>> = {}): void {
     this._row = 0;
     this._done = false;
-    this._prevUp = false;
-    this._prevDown = false;
-    this._prevLeft = false;
-    this._prevRight = false;
-    this._prevConfirm = false;
+    // Keys still held from the screen before count as already pressed (edge-triggered input).
+    this._prevUp = held.up ?? false;
+    this._prevDown = held.down ?? false;
+    this._prevLeft = held.left ?? false;
+    this._prevRight = held.right ?? false;
+    this._prevConfirm = held.confirm ?? false;
   }
 
   /**
