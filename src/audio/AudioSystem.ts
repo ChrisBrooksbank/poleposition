@@ -63,6 +63,11 @@ export class AudioSystem {
 
   // ─── Accessors ─────────────────────────────────────────────────────────────
 
+  /** True once the AudioContext has been created, whether it is running or suspended. */
+  get isCreated(): boolean {
+    return this._context !== null;
+  }
+
   /** Whether the AudioContext has been created and is actively running. */
   get isReady(): boolean {
     return this._context !== null && this._context.state === 'running';

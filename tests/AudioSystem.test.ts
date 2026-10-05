@@ -226,3 +226,13 @@ describe('AudioSystem', () => {
     });
   });
 });
+
+describe('AudioSystem.isCreated', () => {
+  it('stays true while the context is suspended (e.g. paused), unlike isReady', () => {
+    const { system } = makeSystem('suspended');
+    expect(system.isCreated).toBe(false);
+    system.resume();
+    expect(system.isCreated).toBe(true);
+    expect(system.isReady).toBe(false);
+  });
+});

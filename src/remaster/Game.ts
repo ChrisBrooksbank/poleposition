@@ -129,6 +129,8 @@ export class Game {
   private wheelDistance = 0;
   /** True once the finished game's score has been offered to the high-score table. */
   private scoreRecorded = false;
+  /** Shown under GAME OVER: why the game ended. */
+  private gameOverReason = '';
 
   constructor(host: HTMLElement) {
     this.stage = new Stage(host);
@@ -179,14 +181,24 @@ export class Game {
       }
     });
 
-    // Browsers only allow audio after a user gesture.
-    const unlock = () => this.audio.resume();
+    // Browsers only allow audio after a user gesture. While paused the context stays suspended,
+    // otherwise any key press would bring the engine drone back over the pause screen.
+    const unlock = () => {
+      if (this.paused) return;
+      this.audio.resume();
+      this.audio.setMasterVolume(this.muted ? 0 : 1);
+    };
     window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
       if (e.code === 'KeyP' || e.code === 'Escape') this.togglePause();
-      if (e.code === 'KeyM' && this.audio.isReady) this.toggleMute();
+      if (e.code === 'KeyM') this.toggleMute();
     });
     window.addEventListener('keydown', unlock);
     window.addEventListener('pointerdown', unlock);
+    // Leaving the tab mid-race freezes the frame loop but not the audio; pause properly instead.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && !this.paused) this.togglePause();
+    });
 
     this.registerStates();
     this.activateCourse(0);
@@ -281,7 +293,8 @@ export class Game {
     const racing = [GameState.QUALIFYING, GameState.GRAND_PRIX].includes(this.machine.state);
     if (!racing && !this.paused) return;
     this.paused = !this.paused;
-    if (this.audio.isReady) {
+    // A suspended context is not "ready", so test that it exists rather than isReady.
+    if (this.audio.isCreated) {
       if (this.paused) void this.audio.context.suspend();
       else void this.audio.context.resume();
     }
@@ -614,6 +627,7 @@ export class Game {
       onEnter: () => {
         this.score.reset();
         this.scoreRecorded = false;
+        this.gameOverReason = '';
         this.ai.startQualifying();
         this.qualifying.reset(
           this.dip.qualifyingTime,
@@ -637,6 +651,7 @@ export class Game {
           this.car.speed = 0;
           m.transition(GameState.GRID_DISPLAY);
         } else if (this.qualifying.outcome === QualifyingOutcome.FAILED) {
+          this.gameOverReason = this.qualifying.lapTimeSecs > 0 ? 'DID NOT QUALIFY' : 'TIME UP';
           this.endRun();
           m.transition(GameState.GAME_OVER);
         }
@@ -704,10 +719,12 @@ export class Game {
         if (this.grandPrix.outcome === GrandPrixOutcome.COMPLETE) {
           this.score.addTimeBonus(this.grandPrix.timerMs);
           this.raceComplete.reset(this.grandPrix.timerMs);
+          this.gameOverReason = 'RACE COMPLETE';
           this.endRun();
           this.sfx.triggerRaceComplete();
           m.transition(GameState.RACE_COMPLETE);
         } else if (this.grandPrix.outcome === GrandPrixOutcome.FAILED) {
+          this.gameOverReason = 'TIME UP';
           this.endRun();
           m.transition(GameState.GAME_OVER);
         }
@@ -763,7 +780,7 @@ export class Game {
           m.transition(this.scoreRecorded ? GameState.ATTRACT : this.afterGameState());
         }
       },
-      render: (ctx) => screens.drawGameOver(ctx),
+      render: (ctx) => screens.drawGameOver(ctx, this.gameOverReason),
     });
 
     m.register(GameState.NAME_ENTRY, {
