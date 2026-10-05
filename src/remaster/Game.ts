@@ -127,6 +127,8 @@ export class Game {
   private prevAiLateral: number[] = [];
   private showTraffic = false;
   private wheelDistance = 0;
+  /** True once the finished game's score has been offered to the high-score table. */
+  private scoreRecorded = false;
 
   constructor(host: HTMLElement) {
     this.stage = new Stage(host);
@@ -338,6 +340,7 @@ export class Game {
     if (this.paused) return;
     this.snapshot();
     this.machine.update(dt * 1000);
+    this.input.endStep();
     this.music.update();
   }
 
@@ -503,7 +506,8 @@ export class Game {
         useKph: this.dip.useKph,
         lapCurrent: lap?.current,
         lapTotal: lap?.total,
-        racePosition: this.racePosition(),
+        // Qualifying is a solo time trial: traffic is not a race order.
+        racePosition: lap ? this.racePosition() : 0,
       });
       this.ctx.font = 'bold 8px monospace';
       this.ctx.textAlign = 'center';
@@ -609,6 +613,7 @@ export class Game {
     m.register(GameState.QUALIFYING, {
       onEnter: () => {
         this.score.reset();
+        this.scoreRecorded = false;
         this.ai.startQualifying();
         this.qualifying.reset(this.dip.qualifyingTime, REFERENCE_LAP_LENGTH / this.track.length);
         this.beginRun(0);
@@ -729,7 +734,7 @@ export class Game {
           gear: 'high',
         });
         this.raceComplete.update(dt);
-        if (this.raceComplete.isDone) m.transition(GameState.NAME_ENTRY);
+        if (this.raceComplete.isDone) m.transition(this.afterGameState());
       },
       render: (ctx) => {
         clear();
@@ -750,7 +755,9 @@ export class Game {
       onExit: () => this.music.stop(),
       update: (dt) => {
         this.stateElapsed += dt;
-        if (this.stateElapsed > 3000) m.transition(GameState.ATTRACT);
+        if (this.stateElapsed > 3000) {
+          m.transition(this.scoreRecorded ? GameState.ATTRACT : this.afterGameState());
+        }
       },
       render: (ctx) => screens.drawGameOver(ctx),
     });
@@ -813,6 +820,14 @@ export class Game {
         this.dipPanel.render(ctx, screens.W, screens.H);
       },
     });
+  }
+
+  /** Once a game ends: initials for a table-worthy score, otherwise back to the attract loop. */
+  private afterGameState(): GameState {
+    this.scoreRecorded = true;
+    const s = this.score.score;
+    if (s > 0 && this.highScores.isHighScore(s)) return GameState.NAME_ENTRY;
+    return this.machine.state === GameState.GAME_OVER ? GameState.ATTRACT : GameState.GAME_OVER;
   }
 
   private topScore(): number {

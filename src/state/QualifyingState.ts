@@ -36,9 +36,9 @@ export const POSITION_THRESHOLDS: readonly number[] = [
 export const enum QualifyingOutcome {
   /** Lap not yet complete and timer has not expired. */
   PENDING = 'PENDING',
-  /** Player crossed the finish line within the time limit. */
+  /** Player crossed the finish line fast enough to earn a grid slot. */
   QUALIFIED = 'QUALIFIED',
-  /** Timer expired before the lap was completed. */
+  /** Timer expired before the lap was completed, or the lap was too slow to qualify. */
   FAILED = 'FAILED',
 }
 
@@ -139,7 +139,9 @@ export class QualifyingState {
       const lapTimeSecs = this._elapsed / 1000;
       this._lapTimeSecs = lapTimeSecs;
       this._gridPosition = computeGridPosition(lapTimeSecs * this._timeScale);
-      this._outcome = QualifyingOutcome.QUALIFIED;
+      // Too slow for the grid (73 s or more at Fuji): the game ends, as in the arcade.
+      this._outcome =
+        this._gridPosition > 0 ? QualifyingOutcome.QUALIFIED : QualifyingOutcome.FAILED;
       return;
     }
 

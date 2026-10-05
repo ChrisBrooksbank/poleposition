@@ -52,7 +52,7 @@ export class HighScoreManager {
    * Insert a new entry into the table, re-sort, trim to MAX_ENTRIES, and persist.
    * @param initials  Up to 3 characters; shorter strings are space-padded.
    * @param score     The player's final score.
-   * @returns         The 1-based rank of the new entry.
+   * @returns         The 1-based rank of the new entry, or 0 if it did not make the table.
    */
   addEntry(initials: string, score: number): number {
     const trimmed = initials.slice(0, 3).padEnd(3, ' ');
@@ -64,7 +64,7 @@ export class HighScoreManager {
     this._save();
     // Return the rank of the first matching entry (there may be ties)
     const idx = this._entries.findIndex((e) => e.initials === trimmed && e.score === score);
-    return idx >= 0 ? idx + 1 : this._entries.length;
+    return idx >= 0 ? idx + 1 : 0;
   }
 
   /**
@@ -95,6 +95,7 @@ export class HighScoreManager {
             typeof (e as Record<string, unknown>).initials === 'string' &&
             typeof (e as Record<string, unknown>).score === 'number'
         )
+        .sort((a, b) => b.score - a.score)
         .slice(0, HighScoreManager.MAX_ENTRIES);
     } catch {
       this._entries = [];

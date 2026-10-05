@@ -202,6 +202,13 @@ describe('QualifyingState — lap completion → QUALIFIED', () => {
     expect(qs.gridPosition).toBe(0);
   });
 
+  it('fails a completed lap that is too slow to qualify', () => {
+    const qs = new QualifyingState(90);
+    qs.update(80_000, TRACK_LENGTH, TRACK_LENGTH);
+    expect(qs.outcome).toBe(QualifyingOutcome.FAILED);
+    expect(qs.lapTimeSecs).toBeCloseTo(80, 2);
+  });
+
   it('qualifies when playerZ exceeds trackLength (overshoots finish)', () => {
     const qs = new QualifyingState(90);
     qs.update(60_000, TRACK_LENGTH + 100, TRACK_LENGTH);
@@ -229,6 +236,8 @@ describe('QualifyingState — lap completion → QUALIFIED', () => {
 describe('QualifyingState — lap completion takes priority over timer expiry', () => {
   it('QUALIFIED if playerZ reaches trackLength exactly when timer hits 0', () => {
     const qs = new QualifyingState(90);
+    // A long circuit (half-scale thresholds) so a 90 s lap still earns a grid slot.
+    qs.reset(90, 0.5);
     // Update with exactly 90s elapsed and playerZ at finish — lap wins.
     qs.update(90_000, TRACK_LENGTH, TRACK_LENGTH);
     expect(qs.outcome).toBe(QualifyingOutcome.QUALIFIED);

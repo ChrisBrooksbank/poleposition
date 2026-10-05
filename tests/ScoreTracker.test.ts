@@ -279,3 +279,11 @@ describe('ScoreTracker — combined scenario', () => {
     expect(st.score).toBe(11_000);
   });
 });
+
+describe('ScoreTracker — fractional distance', () => {
+  it('carries fractions between frames instead of dropping them', () => {
+    const st = new ScoreTracker();
+    for (let i = 0; i < 60; i++) st.addDistance(0.05);
+    expect(st.score).toBe(30);
+  });
+});

@@ -36,7 +36,39 @@ describe('InputHandler', () => {
     input.pressKey('ArrowLeft');
     expect(input.left).toBe(true);
     input.releaseKey('ArrowLeft');
+    input.endStep();
     expect(input.left).toBe(false);
+  });
+
+  it('keeps a quick tap visible until the next sim step has seen it', () => {
+    input.pressKey('Enter');
+    input.releaseKey('Enter');
+    expect(input.isKeyDown('Enter')).toBe(true);
+    input.endStep();
+    expect(input.isKeyDown('Enter')).toBe(false);
+  });
+
+  it('forgets every key on releaseAll (window blur)', () => {
+    input.pressKey('ArrowUp');
+    input.pressKey('ArrowLeft');
+    input.releaseAll();
+    expect(input.throttle).toBe(false);
+    expect(input.left).toBe(false);
+  });
+
+  it('ignores auto-repeat keydown events so holding Shift does not flip gears', () => {
+    const target = new EventTarget();
+    const handler = new InputHandler(target);
+    const shift = (repeat: boolean) => {
+      const e = new Event('keydown') as Event & { code: string; repeat: boolean };
+      e.code = 'ShiftLeft';
+      e.repeat = repeat;
+      target.dispatchEvent(e);
+    };
+    shift(false);
+    shift(true);
+    shift(true);
+    expect(handler.gear).toBe('high');
   });
 
   it('multiple keys can be held simultaneously', () => {
@@ -81,6 +113,7 @@ describe('InputHandler', () => {
     input.pressKey('ArrowUp');
     expect(input.isKeyDown('ArrowUp')).toBe(true);
     input.releaseKey('ArrowUp');
+    input.endStep();
     expect(input.isKeyDown('ArrowUp')).toBe(false);
   });
 
@@ -106,6 +139,7 @@ describe('InputHandler WASD aliases', () => {
     expect(input.left).toBe(true);
     expect(input.right).toBe(false);
     input.releaseKey('KeyA');
+    input.endStep();
     input.pressKey('KeyD');
     input.pressKey('KeyS');
     expect(input.right).toBe(true);
