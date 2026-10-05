@@ -127,6 +127,8 @@ export class Game {
   private prevAiLateral: number[] = [];
   private showTraffic = false;
   private wheelDistance = 0;
+  /** Gear used for the last sim step. */
+  private drivenGear: 'low' | 'high' = 'low';
   /** True once the finished game's score has been offered to the high-score table. */
   private scoreRecorded = false;
   /** Shown under GAME OVER: why the game ended. */
@@ -437,6 +439,7 @@ export class Game {
           gear: this.input.gear,
         };
     this.car.step(dt, input);
+    this.drivenGear = input.gear;
 
     // Puddles cause a spin and a lateral wobble; they never destroy the car.
     this.puddleSpin.update(dtMs);
@@ -527,8 +530,10 @@ export class Game {
       this.ctx.fillStyle = '#ffdd00';
       this.ctx.fillText(`TOP ${String(this.topScore()).padStart(6, '0')}`, screens.W / 2, 12);
       this.ctx.textAlign = 'right';
-      this.ctx.fillStyle = this.input.gear === 'high' ? '#ff6644' : '#66ddff';
-      this.ctx.fillText(this.input.gear === 'high' ? 'HIGH' : 'LOW', screens.W - 4, screens.H - 8);
+      // The gear the car is actually in (the autopilot test hook picks its own).
+      const high = (this.autopilot ? this.drivenGear : this.input.gear) === 'high';
+      this.ctx.fillStyle = high ? '#ff6644' : '#66ddff';
+      this.ctx.fillText(high ? 'HIGH' : 'LOW', screens.W - 4, screens.H - 8);
     };
 
     m.register(GameState.ATTRACT, {
@@ -891,8 +896,12 @@ export class Game {
   private placePlayer(distance: number, lateral: number, exploding: boolean): void {
     const pose = this.track.poseAt(distance, lateral);
     const model = this.playerModel;
-    // Blink while protected after a respawn.
-    const blinkHidden = this.invulnerableMs > 0 && Math.floor(this.invulnerableMs / 120) % 2 === 0;
+    // Blink while protected after a respawn. The timer is frozen while the start lights hold the
+    // grid, and could freeze on a hidden phase, so only blink once the car is free to go.
+    const blinkHidden =
+      this.invulnerableMs > 0 &&
+      !this.startSequence.isHolding &&
+      Math.floor(this.invulnerableMs / 120) % 2 === 0;
     model.group.visible = !exploding && !blinkHidden;
     model.group.position.set(pose.x, pose.y, pose.z);
     const spin = this.puddleSpin.isSpinning
