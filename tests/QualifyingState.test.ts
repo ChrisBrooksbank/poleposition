@@ -287,3 +287,21 @@ describe('QualifyingState time scale', () => {
     expect(q.gridPosition).toBe(1);
   });
 });
+
+describe('QualifyingState — Practice Rank cut-off', () => {
+  it('a lenient rank lets a 75 s lap start 8th', () => {
+    expect(computeGridPosition(75, 76)).toBe(8);
+  });
+
+  it('a strict rank fails a lap that rank C would put 4th', () => {
+    expect(computeGridPosition(63, 62)).toBe(0);
+  });
+
+  it('applies the cut-off passed to reset', () => {
+    const qs = new QualifyingState(90);
+    qs.reset(90, 1, 80);
+    qs.update(78_000, TRACK_LENGTH, TRACK_LENGTH);
+    expect(qs.outcome).toBe(QualifyingOutcome.QUALIFIED);
+    expect(qs.gridPosition).toBe(8);
+  });
+});

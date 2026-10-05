@@ -25,10 +25,13 @@ export class NameEntryState {
   static readonly INITIAL_DELAY_MS = 350;
   /** Repeat rate once repeat has started (ms per step). */
   static readonly REPEAT_RATE_MS = 120;
+  /** An unattended entry is accepted as it stands after this long, so the cabinet returns to attract. */
+  static readonly TIMEOUT_MS = 30_000;
 
   private _slot = 0;
   private _letterIndices: number[] = [0, 0, 0];
   private _done = false;
+  private _elapsed = 0;
 
   // Key-repeat state for left/right
   private _leftHeld = 0; // ms the left key has been held continuously
@@ -71,6 +74,7 @@ export class NameEntryState {
     this._slot = 0;
     this._letterIndices = [0, 0, 0];
     this._done = false;
+    this._elapsed = 0;
     this._leftHeld = 0;
     this._rightHeld = 0;
     this._leftFired = false;
@@ -90,6 +94,13 @@ export class NameEntryState {
    */
   update(dt: number, left: boolean, right: boolean, confirm: boolean): void {
     if (this._done) return;
+
+    this._elapsed += dt;
+    if (this._elapsed >= NameEntryState.TIMEOUT_MS) {
+      this._slot = CHAR_COUNT;
+      this._done = true;
+      return;
+    }
 
     const leftStep = this._repeatStep(dt, left, '_leftHeld', '_leftFired');
     const rightStep = this._repeatStep(dt, right, '_rightHeld', '_rightFired');

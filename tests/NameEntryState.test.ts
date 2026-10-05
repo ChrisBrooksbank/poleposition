@@ -261,3 +261,13 @@ describe('NAME_ENTRY_LETTERS', () => {
     expect(unique.size).toBe(NAME_ENTRY_LETTERS.length);
   });
 });
+
+describe('NameEntryState — timeout', () => {
+  it('accepts the initials as they stand once the entry is left unattended', () => {
+    const ne = new NameEntryState();
+    ne.update(16, false, true, false); // A -> B in the first slot
+    ne.update(NameEntryState.TIMEOUT_MS, false, false, false);
+    expect(ne.isDone).toBe(true);
+    expect(ne.initials).toBe('BAA');
+  });
+});

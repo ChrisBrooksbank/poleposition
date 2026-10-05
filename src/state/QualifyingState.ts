@@ -46,13 +46,18 @@ export const enum QualifyingOutcome {
  * Returns the 1-based grid position (1–8) earned for the given lap time, or
  * 0 if the player failed to qualify (lap time >= 73.0 seconds).
  */
-export function computeGridPosition(lapTimeSeconds: number): number {
-  for (let i = 0; i < POSITION_THRESHOLDS.length; i++) {
+export function computeGridPosition(
+  lapTimeSeconds: number,
+  cutoffSeconds = POSITION_THRESHOLDS[POSITION_THRESHOLDS.length - 1]
+): number {
+  // The Practice Rank DIP switch moves the qualifying cut-off; the faster slots stay fixed.
+  if (lapTimeSeconds >= cutoffSeconds) return 0;
+  for (let i = 0; i < POSITION_THRESHOLDS.length - 1; i++) {
     if (lapTimeSeconds < POSITION_THRESHOLDS[i]) {
       return i + 1;
     }
   }
-  return 0; // did not qualify
+  return POSITION_THRESHOLDS.length;
 }
 
 export class QualifyingState {
@@ -61,6 +66,8 @@ export class QualifyingState {
    * are judged against the arcade's Fuji-length thresholds proportionally.
    */
   private _timeScale = 1;
+  /** Lap time (at Fuji scale) at or above which the player fails to qualify. */
+  private _cutoffSecs = POSITION_THRESHOLDS[POSITION_THRESHOLDS.length - 1];
 
   /** Duration (ms) for which the "QUALIFYING START" banner is displayed. */
   static readonly ANNOUNCE_DURATION_MS = 3000;
@@ -138,7 +145,7 @@ export class QualifyingState {
     if (playerZ >= trackLength) {
       const lapTimeSecs = this._elapsed / 1000;
       this._lapTimeSecs = lapTimeSecs;
-      this._gridPosition = computeGridPosition(lapTimeSecs * this._timeScale);
+      this._gridPosition = computeGridPosition(lapTimeSecs * this._timeScale, this._cutoffSecs);
       // Too slow for the grid (73 s or more at Fuji): the game ends, as in the arcade.
       this._outcome =
         this._gridPosition > 0 ? QualifyingOutcome.QUALIFIED : QualifyingOutcome.FAILED;
@@ -154,9 +161,11 @@ export class QualifyingState {
   /** Reset to initial state with the given (or default) time limit. */
   reset(
     timeLimitSeconds: QualifyingTimerOption = QualifyingState.DEFAULT_TIMER_S,
-    timeScale = 1
+    timeScale = 1,
+    cutoffSeconds = POSITION_THRESHOLDS[POSITION_THRESHOLDS.length - 1]
   ): void {
     this._timeScale = timeScale;
+    this._cutoffSecs = cutoffSeconds;
     this._timerMs = timeLimitSeconds * 1000;
     this._elapsed = 0;
     this._outcome = QualifyingOutcome.PENDING;

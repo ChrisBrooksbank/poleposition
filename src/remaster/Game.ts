@@ -250,7 +250,7 @@ export class Game {
     const starts = [0, 1000, 2200, 3300];
     this.demoActive = true;
     this.ai.startQualifying();
-    this.car = new PlayerCar(this.track);
+    this.car = new PlayerCar(this.track, this.dip.topSpeedMph);
     this.car.distance = starts[this.demoRuns++ % starts.length];
     this.car.speed = 45;
     this.showTraffic = true;
@@ -260,7 +260,7 @@ export class Game {
   private stopDemo(): void {
     this.demoActive = false;
     this.showTraffic = false;
-    this.car = new PlayerCar(this.track);
+    this.car = new PlayerCar(this.track, this.dip.topSpeedMph);
     this.resetPositions(0);
   }
 
@@ -615,7 +615,11 @@ export class Game {
         this.score.reset();
         this.scoreRecorded = false;
         this.ai.startQualifying();
-        this.qualifying.reset(this.dip.qualifyingTime, REFERENCE_LAP_LENGTH / this.track.length);
+        this.qualifying.reset(
+          this.dip.qualifyingTime,
+          REFERENCE_LAP_LENGTH / this.track.length,
+          this.dip.qualifyingCutoffSeconds
+        );
         this.beginRun(0);
         this.sfx.triggerQualifyingFanfare();
         this.voice.triggerQualifyingStart();
@@ -804,7 +808,15 @@ export class Game {
     });
 
     m.register(GameState.SETTINGS, {
-      onEnter: () => this.dipPanel.reset(),
+      // D opens this screen and also steers right, so keys already held must not act.
+      onEnter: () =>
+        this.dipPanel.reset({
+          up: this.input.throttle,
+          down: this.input.brake,
+          left: this.input.left,
+          right: this.input.right,
+          confirm: this.confirmPressed,
+        }),
       update: () => {
         this.dipPanel.update(
           this.input.throttle,
@@ -876,7 +888,8 @@ export class Game {
   }
 
   private placeTraffic(alpha: number, state: GameState): void {
-    const visible = this.showTraffic && state !== GameState.ATTRACT;
+    // The attract demo turns traffic on itself; the title card leaves it off.
+    const visible = this.showTraffic && (state !== GameState.ATTRACT || this.demoActive);
     this.ai.all.forEach((car, i) => {
       const model = this.aiModels[i];
       model.group.visible = visible;
