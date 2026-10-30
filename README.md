@@ -1,5 +1,7 @@
 # Pole Position — a 3D remaster (unofficial fan project)
 
+**Live demo:** [poleposition-fan-project.netlify.app](https://poleposition-fan-project.netlify.app)
+
 **The 1982 arcade racer, rebuilt in 3D for the browser, with a few hundred metres of trackside billboards that are really a love letter.**
 
 ![Grand Prix start: banner plane, red lights, green, and a charge from the back of the grid past the Lizzie & Chris sign](docs/media/gameplay.gif)
